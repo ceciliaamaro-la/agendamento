@@ -1,6 +1,13 @@
 from django.db import models
 
+class ConexaoAgenda(models.Model):
+    nome = models.CharField(max_length=100)
+    login = models.CharField(max_length=100)
+    senha = models.CharField(max_length=100)
 
+    def __str__(self):
+        return self.nome
+    
 class Escola(models.Model):
 
     nome_escola = models.CharField(
@@ -135,7 +142,8 @@ class WhatsAppEnvio(models.Model):
         max_length=20,
         default="enviado"
     )
-
+    class Meta:
+            unique_together = ("evento", "numero_destino", "hash_evento")
     def __str__(self):
 
         return f"{self.numero_destino} - {self.hash_evento}"

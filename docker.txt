@@ -1,0 +1,77 @@
+Instalação Passo a Passo
+
+1. Remover versões antigas (se houver)
+Recomendo rodar este comando para evitar conflitos com pacotes antigos ou não oficiais:
+bash
+
+sudo apt-get remove docker.io docker-doc docker-compose podman-docker containerd runc
+
+2. Configurar o repositório do Docker
+Execute os comandos abaixo para adicionar a fonte correta de instalação:
+bash
+
+# Atualiza os pacotes e instala dependências
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+
+# Cria a pasta para as chaves de segurança (se não existir)
+sudo install -m 0755 -d /etc/apt/keyrings
+
+# Baixa e adiciona a chave GPG oficial do Docker
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Adiciona o repositório do Docker à lista do apt
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Atualiza novamente para reconhecer o novo repositório
+sudo apt-get update
+
+3. Instalar o Docker Engine
+Agora sim o sistema reconhecerá o pacote docker-ce:
+bash
+
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+✅ Verificar a Instalação
+
+Após a instalação, rode o comando abaixo para testar se tudo funcionou:
+bash
+
+
+sudo docker run hello-world
+
+Se aparecer uma mensagem de boas-vindas do Docker, a instalação foi um sucesso!
+⚙️ Pós-instalação (Opcional, mas Recomendado)
+
+    Executar Docker sem sudo: Para não precisar digitar sudo toda vez que for usar o Docker, adicione seu usuário ao grupo docker:
+    bash
+
+sudo usermod -aG docker $USER
+
+Importante: Você precisará sair da sessão e entrar novamente para que a mudança faça efeito.
+
+Iniciar automaticamente: Para que o Docker inicie junto com o sistema:
+bash
+
+sudo systemctl enable docker
+
+
+ 2004  sudo apt-get remove docker.io docker-doc docker-compose podman-docker containerd runc
+ 2005  sudo apt-get update
+ 2006  sudo apt-get install ca-certificates curl
+ 2007  sudo install -m 0755 -d /etc/apt/keyrings
+ 2008  sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+ 2009  sudo chmod a+r /etc/apt/keyrings/docker.asc
+ 2010  echo   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" |   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+ 2011  sudo apt-get update
+ 2012  sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+ 2013  sudo docker run hello-world
+ 2014  sudo systemctl start docker
+ 2015  sudo systemctl enable docker
+ 2016  sudo systemctl start docker
+ 2017  sudo docker run hello-world

@@ -40,13 +40,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',  # Adicionar DRF
     'agenda',
-    'whatsapp_integration',
+    'whatsapp',
 ]
 
 # Configurações da Evolution API
 EVOLUTION_API = {
-    'BASE_URL': 'http://localhost:8080',
-    'API_KEY': '123456',  # Em produção, use variáveis de ambiente
+
+    "BASE_URL": "http://localhost:8080",
+
+    "API_KEY": "123456"
+
 }
 
 # Configurações do REST Framework
