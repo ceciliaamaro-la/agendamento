@@ -1,0 +1,208 @@
+Estou desenvolvendo um sistema em **Python + Django** que usa **Playwright** para acessar a agenda escolar do site Bernoulli, coletar tarefas e enviar notificações via **API de WhatsApp**.
+
+Preciso que você **analise a arquitetura do projeto, identifique erros de fluxo e corrija o código**.
+
+O principal problema atual é que **a mensagem está sendo enviada antes do robô terminar de coletar os eventos**.
+
+Também preciso melhorar **logs, tratamento de erros e leitura de cookies**.
+
+---
+
+# 📁 Estrutura atual do projeto
+
+agenda/
+
+agenda_robot.py
+Responsável por executar o robô Playwright que acessa o site e extrai os eventos.
+
+services/
+
+sync_agenda.py
+Orquestra o processo completo:
+
+1. busca conexões de agenda no banco
+2. executa o robô
+3. salva eventos novos
+4. envia mensagem WhatsApp
+
+envio_service.py
+Responsável por enviar mensagens para API local:
+
+http://127.0.0.1:8080/message/sendText/agenda
+
+tasks/
+
+executar_robo.py
+Script que inicia a sincronização da agenda.
+
+storage/
+
+cookies.json
+Armazena cookies de login para evitar login toda execução.
+
+models.py
+
+ConexaoAgenda
+Guarda login e senha da agenda escolar.
+
+EventoAgenda
+Guarda eventos coletados pelo robô.
+
+---
+
+# 🔄 Fluxo correto do sistema
+
+executar_robo.py
+
+↓
+
+sync_agenda.py
+
+↓
+
+extrair_eventos() em agenda_robot.py
+
+↓
+
+salvar novos eventos no banco
+
+↓
+
+enviar mensagem WhatsApp
+
+---
+
+# ⚠️ Problema atual
+
+O log mostra que a mensagem está sendo enviada **ANTES do robô executar**.
+
+Exemplo do log:
+
+POST /message/sendText/agenda
+
+Mensagem enviada!
+
+🚀 Iniciando robô...
+
+🔎 Sincronizando agenda...
+
+🤖 Iniciando robô
+
+🔐 Fazendo login
+
+❌ ERRO NO ROBÔ
+
+Ou seja o fluxo atual está assim:
+
+enviar_mensagem()
+
+↓
+
+extrair_eventos()
+
+O correto deveria ser:
+
+extrair_eventos()
+
+↓
+
+salvar eventos
+
+↓
+
+enviar_mensagem()
+
+---
+
+# 🐞 Outro erro
+
+Erro ao carregar cookies:
+
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1
+
+Provavelmente cookies.json está vazio.
+
+Precisamos tratar isso corretamente.
+
+---
+
+# 📌 O que preciso que você faça
+
+1️⃣ Revisar o fluxo completo do sistema
+2️⃣ Garantir que a ordem correta seja:
+
+executar_robo
+→ sincronizar_agenda
+→ extrair_eventos
+→ salvar eventos
+→ enviar mensagem
+
+3️⃣ Corrigir carregamento de cookies
+
+Se cookies.json estiver vazio ou inválido:
+
+* ignorar cookies
+* fazer login novamente
+* salvar cookies novos
+
+4️⃣ Melhorar logs
+
+Logs esperados:
+
+🚀 Iniciando robô
+🔎 Buscando conexões
+🏫 Processando turma
+📅 Eventos encontrados
+💾 Eventos salvos
+📤 Enviando mensagem
+✅ Mensagem enviada
+
+5️⃣ Melhorar tratamento de erro
+
+Usar:
+
+traceback.print_exc()
+
+para mostrar erro completo.
+
+6️⃣ Garantir que envio de mensagem aconteça **somente se houver eventos novos**
+
+---
+
+# 📌 Requisitos técnicos
+
+Python 3.11
+Django
+Playwright
+Requests
+
+---
+
+# 🎯 Objetivo final
+
+Ter um fluxo robusto:
+
+executar_robo.py
+↓
+
+sync_agenda.py
+↓
+
+agenda_robot.py
+
+↓
+
+salvar eventos
+
+↓
+
+enviar mensagem WhatsApp
+
+---
+
+# 🧠 O que quero da resposta
+
+1. Diagnóstico do problema
+2. Código corrigido
+3. Melhor organização das funções
+4. Sugestões para evitar erros futuros

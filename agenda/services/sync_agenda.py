@@ -2,88 +2,47 @@ import logging
 import traceback
 
 from agenda.agenda_robot import extrair_eventos
-from agenda.services.envio_service import enviar_mensagem
-from agenda.models import ConexaoAgenda, EventoAgenda
+from agenda.services.salvar_eventos_service import salvar_eventos
+from agenda.services.envio_service import enviar_tarefas
+from agenda.models import ConexaoAgenda
 
 logger = logging.getLogger(__name__)
 
 
 def sincronizar_agenda():
 
-    logger.info("🚀 Iniciando robô...")
+    logger.info("🚀 Iniciando sincronização da agenda")
 
     try:
 
-        logger.info("🔎 Buscando conexões de agenda")
-
         conexoes = ConexaoAgenda.objects.filter(ativo=True)
 
-        logger.info(f"Total conexões: {conexoes.count()}")
+        logger.info(f"🔎 Buscando conexões: {conexoes.count()} encontradas")
+
+        if not conexoes.exists():
+            logger.info("📭 Nenhuma conexão ativa encontrada")
+            return
 
         for conexao in conexoes:
 
             logger.info(f"🏫 Processando turma: {conexao.turma}")
 
-            ultimo_evento = EventoAgenda.objects.filter(
-                conexao=conexao
-            ).order_by("-data_criacao").first()
+            eventos = extrair_eventos(conexao.login, conexao.senha)
 
-            if ultimo_evento:
-                logger.info(f"Último evento criado em: {ultimo_evento.data_criacao}")
+            logger.info(f"📅 Eventos encontrados: {len(eventos)}")
 
-            # -------------------------------------
-            # EXECUTA O ROBÔ
-            # -------------------------------------
+            resultado = salvar_eventos(eventos, turma=conexao.turma)
 
-            eventos = extrair_eventos(
-                conexao.login,
-                conexao.senha
+            logger.info(
+                f"💾 Eventos salvos: {resultado['salvos']} | "
+                f"Ignorados (já existentes): {resultado['ignorados']}"
             )
 
-            logger.info(f"Eventos encontrados: {len(eventos)}")
-
-            novos_eventos = []
-
-            for evento in eventos:
-
-                existe = EventoAgenda.objects.filter(
-                    titulo=evento["titulo"],
-                    data=evento["data"],
-                    conexao=conexao
-                ).exists()
-
-                if not existe:
-
-                    novo = EventoAgenda.objects.create(
-                        conexao=conexao,
-                        titulo=evento["titulo"],
-                        tipo=evento["tipo"],
-                        data=evento["data"],
-                        descricao=evento["descricao"]
-                    )
-
-                    novos_eventos.append(novo)
-
-            logger.info(f"Novos eventos: {len(novos_eventos)}")
-
-            # -------------------------------------
-            # ENVIO DE MENSAGEM (SOMENTE DEPOIS)
-            # -------------------------------------
-
-            if novos_eventos:
-
-                logger.info("📤 Enviando mensagem")
-
-                enviar_mensagem(novos_eventos)
-
-                logger.info("✅ Mensagem enviada")
-
-            else:
-
-                logger.info("📭 Nenhum evento novo")
+        if conexoes.exists():
+            logger.info("📤 Enviando mensagens WhatsApp")
+            enviar_tarefas()
 
     except Exception as e:
 
-        logger.error("❌ ERRO NO ROBÔ")
-        logger.error(str(e))
+        logger.error("❌ ERRO NA SINCRONIZAÇÃO DA AGENDA")
         traceback.print_exc()

@@ -1,11 +1,11 @@
 from playwright.sync_api import sync_playwright
 from datetime import datetime, timedelta
-import re
 import logging
 import os
 import json
 import time
 import random
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -18,39 +18,46 @@ COOKIES_PATH = "agenda/storage/cookies.json"
 
 def carregar_cookies(context):
 
-    if os.path.exists(COOKIES_PATH):
+    if not os.path.exists(COOKIES_PATH):
+        return False
 
-        try:
+    try:
 
-            with open(COOKIES_PATH, "r") as f:
-                cookies = json.load(f)
+        with open(COOKIES_PATH, "r") as f:
+            conteudo = f.read().strip()
 
-            context.add_cookies(cookies)
-
-            logger.info("🍪 Cookies carregados")
-
-            return True
-
-        except Exception as e:
-
-            logger.warning("⚠️ Cookies inválidos. Recriando.")
-
+        if not conteudo:
+            logger.warning("⚠️ Arquivo de cookies vazio. Ignorando.")
             os.remove(COOKIES_PATH)
-
             return False
 
-    return False
+        cookies = json.loads(conteudo)
+
+        if not isinstance(cookies, list) or len(cookies) == 0:
+            logger.warning("⚠️ Cookies inválidos. Ignorando.")
+            os.remove(COOKIES_PATH)
+            return False
+
+        context.add_cookies(cookies)
+        logger.info("🍪 Cookies carregados com sucesso")
+        return True
+
+    except (json.JSONDecodeError, Exception) as e:
+        logger.warning(f"⚠️ Erro ao carregar cookies: {e}. Recriando.")
+        os.remove(COOKIES_PATH)
+        return False
 
 
 def salvar_cookies(context):
 
-    logger.info("💾 Salvando cookies")
+    os.makedirs(os.path.dirname(COOKIES_PATH), exist_ok=True)
 
     cookies = context.cookies()
 
     with open(COOKIES_PATH, "w") as f:
-
         json.dump(cookies, f)
+
+    logger.info("💾 Cookies salvos")
 
 
 # -------------------------------
@@ -58,7 +65,6 @@ def salvar_cookies(context):
 # -------------------------------
 
 def delay():
-
     time.sleep(random.uniform(1.2, 2.6))
 
 
@@ -72,151 +78,133 @@ def extrair_eventos(login, senha):
 
     dados = []
 
-    with sync_playwright() as p:
+    try:
 
-        browser = p.chromium.launch(
-            headless=True,
-            args=["--disable-blink-features=AutomationControlled"]
-        )
+        with sync_playwright() as p:
 
-        context = browser.new_context()
+            browser = p.chromium.launch(
+                headless=True,
+                args=["--disable-blink-features=AutomationControlled"]
+            )
 
-        page = context.new_page()
+            context = browser.new_context()
+            page = context.new_page()
 
-        # -------------------------------
-        # LOGIN COM COOKIES
-        # -------------------------------
+            # ----------------------------
+            # LOGIN COM COOKIES
+            # ----------------------------
 
-        logado = carregar_cookies(context)
+            logado = carregar_cookies(context)
 
-        if logado:
+            if logado:
 
-            logger.info("⚡ Login via cookies")
+                logger.info("⚡ Login via cookies")
+                page.goto("https://mb4.bernoulli.com.br/minhaarea")
 
-            page.goto("https://mb4.bernoulli.com.br/minhaarea")
+            else:
 
-        else:
+                logger.info("🔐 Fazendo login com usuário e senha")
 
-            logger.info("🔐 Fazendo login")
+                page.goto("https://mb4.bernoulli.com.br/login")
 
-            page.goto("https://mb4.bernoulli.com.br/login")
+                page.get_by_role("textbox", name="Login").fill(login)
+                page.get_by_role("textbox", name="Senha").fill(senha)
 
-            page.get_by_role("textbox", name="Login").fill(login)
-            page.get_by_role("textbox", name="Senha").fill(senha)
+                delay()
+
+                page.get_by_role("button", name="ENTRAR").click()
+                page.wait_for_load_state("networkidle")
+
+                salvar_cookies(context)
 
             delay()
 
-            page.get_by_role("button", name="ENTRAR").click()
+            # ----------------------------
+            # IR PARA AGENDA
+            # ----------------------------
 
-            page.wait_for_load_state("networkidle")
+            page.goto("https://mb4.bernoulli.com.br/minhaarea/agenda")
+            page.wait_for_selector(".calendario-table-days")
 
-            salvar_cookies(context)
+            logger.info("📅 Lendo agenda")
 
-        delay()
+            semanas = page.query_selector_all(".calendario-table-days .semana")
 
-        # -------------------------------
-        # IR PARA AGENDA
-        # -------------------------------
+            hoje = datetime.now().date()
+            limite = hoje + timedelta(days=3)
 
-        page.goto("https://mb4.bernoulli.com.br/minhaarea/agenda")
+            for semana in semanas:
 
-        page.wait_for_selector(".calendario-table-days")
+                dias = semana.query_selector_all(".semana-day")
 
-        logger.info("📅 Lendo agenda")
+                for dia in dias:
 
-        semanas = page.query_selector_all(".calendario-table-days .semana")
+                    data_iso = dia.get_attribute("data-date")
 
-        hoje = datetime.now().date()
-        limite = hoje + timedelta(days=3)
+                    if not data_iso:
+                        continue
 
-        for semana in semanas:
+                    data = datetime.fromisoformat(data_iso.replace("Z", ""))
 
-            dias = semana.query_selector_all(".semana-day")
+                    if not (hoje <= data.date() <= limite):
+                        continue
 
-            for dia in dias:
+                    numero_dia = dia.query_selector(".day").inner_text()
 
-                data_iso = dia.get_attribute("data-date")
+                    eventos = dia.query_selector_all(".tag-circle")
 
-                if not data_iso:
-                    continue
+                    if not eventos:
+                        continue
 
-                data = datetime.fromisoformat(data_iso.replace("Z", ""))
+                    page.locator("a").filter(has_text=numero_dia).first.click()
+                    page.wait_for_selector(".EventItem")
 
-                if not (hoje <= data.date() <= limite):
-                    continue
+                    lista_eventos = page.locator(".EventItem")
+                    total = lista_eventos.count()
 
-                numero_dia = dia.query_selector(".day").inner_text()
+                    for i in range(total):
 
-                eventos = dia.query_selector_all(".tag-circle")
+                        evento = lista_eventos.nth(i)
+                        evento.click()
 
-                if not eventos:
-                    continue
+                        modal = page.locator(".ModalContent.Event")
+                        modal.wait_for()
 
-                page.locator("a").filter(has_text=numero_dia).first.click()
+                        titulo = modal.locator(".title-24-600").inner_text()
+                        tipo = modal.locator(".Tag span").inner_text()
+                        datas = modal.locator(".ph-calendar").locator("xpath=..").inner_text()
+                        descricao = modal.locator(".event-description").inner_text()
 
-                page.wait_for_selector(".EventItem")
+                        arquivos = []
+                        downloads = modal.locator(".FileDownload")
+                        qtd = downloads.count()
 
-                lista_eventos = page.locator(".EventItem")
+                        for j in range(qtd):
+                            item = downloads.nth(j)
+                            nome_arquivo = item.inner_text()
+                            link = item.locator("a").get_attribute("href")
+                            arquivos.append({"nome": nome_arquivo, "link": link})
 
-                total = lista_eventos.count()
-
-                for i in range(total):
-
-                    evento = lista_eventos.nth(i)
-
-                    evento.click()
-
-                    modal = page.locator(".ModalContent.Event")
-
-                    modal.wait_for()
-
-                    titulo = modal.locator(".title-24-600").inner_text()
-
-                    tipo = modal.locator(".Tag span").inner_text()
-
-                    datas = modal.locator(".ph-calendar").locator("xpath=..").inner_text()
-
-                    descricao = modal.locator(".event-description").inner_text()
-
-                    arquivos = []
-
-                    downloads = modal.locator(".FileDownload")
-
-                    qtd = downloads.count()
-
-                    for j in range(qtd):
-
-                        item = downloads.nth(j)
-
-                        nome_arquivo = item.inner_text()
-
-                        link = item.locator("a").get_attribute("href")
-
-                        arquivos.append({
-                            "nome": nome_arquivo,
-                            "link": link
+                        dados.append({
+                            "data": data.date(),
+                            "dia": numero_dia,
+                            "titulo": titulo,
+                            "tipo": tipo,
+                            "datas": datas,
+                            "descricao": descricao,
+                            "arquivos": arquivos
                         })
 
-                    dados.append({
+                        logger.info(f"📌 Evento capturado: {titulo}")
 
-                        "data": data.date(),
-                        "dia": numero_dia,
-                        "titulo": titulo,
-                        "tipo": tipo,
-                        "datas": datas,
-                        "descricao": descricao,
-                        "arquivos": arquivos
+                        page.keyboard.press("Escape")
+                        delay()
 
-                    })
+            browser.close()
 
-                    logger.info(f"📌 Evento capturado: {titulo}")
-
-                    # fechar modal
-                    page.keyboard.press("Escape")
-
-                    delay()
-
-        browser.close()
+    except Exception as e:
+        logger.error(f"❌ Erro no robô: {e}")
+        traceback.print_exc()
 
     logger.info(f"📊 Total eventos coletados: {len(dados)}")
 
