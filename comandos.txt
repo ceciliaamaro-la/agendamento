@@ -43,8 +43,8 @@ https://docs.google.com/presentation/d/1bLlmdfGteVQDntqBffNq90Mat6j5bt3Z9tav_wc6
 
 page.goto("https://mb4.bernoulli.com.br/login")
 
-        page.get_by_role("textbox", name="Login").fill("cecilia.amaro@soulasalle.com.br")
-        page.get_by_role("textbox", name="Senha").fill("#30Ceci3004")
+cecilia.amaro@soulasalle.com.br
+        #30Ceci3004
         
         
         [campeao.prato_0w@icloud.com](mailto:

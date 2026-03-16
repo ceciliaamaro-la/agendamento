@@ -1,32 +1,128 @@
 from playwright.sync_api import sync_playwright
 from datetime import datetime, timedelta
 import re
+import logging
+import os
+import json
+import time
+import random
 
-def extrair_eventos():
+logger = logging.getLogger(__name__)
+
+COOKIES_PATH = "agenda/storage/cookies.json"
+
+
+# -------------------------------
+# COOKIES
+# -------------------------------
+
+def carregar_cookies(context):
+
+    if os.path.exists(COOKIES_PATH):
+
+        try:
+
+            with open(COOKIES_PATH, "r") as f:
+                cookies = json.load(f)
+
+            context.add_cookies(cookies)
+
+            logger.info("🍪 Cookies carregados")
+
+            return True
+
+        except Exception as e:
+
+            logger.warning("⚠️ Cookies inválidos. Recriando.")
+
+            os.remove(COOKIES_PATH)
+
+            return False
+
+    return False
+
+
+def salvar_cookies(context):
+
+    logger.info("💾 Salvando cookies")
+
+    cookies = context.cookies()
+
+    with open(COOKIES_PATH, "w") as f:
+
+        json.dump(cookies, f)
+
+
+# -------------------------------
+# DELAY HUMANO (anti-bloqueio)
+# -------------------------------
+
+def delay():
+
+    time.sleep(random.uniform(1.2, 2.6))
+
+
+# -------------------------------
+# ROBO
+# -------------------------------
+
+def extrair_eventos(login, senha):
+
+    logger.info("🤖 Iniciando robô")
 
     dados = []
 
     with sync_playwright() as p:
 
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
+        browser = p.chromium.launch(
+            headless=True,
+            args=["--disable-blink-features=AutomationControlled"]
+        )
 
-        page.goto("https://mb4.bernoulli.com.br/login")
+        context = browser.new_context()
 
-        # LOGIN
-        page.get_by_role("textbox", name="Login").fill("cecilia.amaro@soulasalle.com.br")
-        page.get_by_role("textbox", name="Senha").fill("#30Ceci3004")
+        page = context.new_page()
 
-        page.get_by_role("button", name="ENTRAR").click()
-        page.get_by_role("button", name="AVANÇAR").click()
+        # -------------------------------
+        # LOGIN COM COOKIES
+        # -------------------------------
 
-        page.locator("div").filter(has_text="Que bom ter você aqui no Meu").nth(1).click()
-        page.get_by_role("button").nth(1).click()
+        logado = carregar_cookies(context)
 
+        if logado:
+
+            logger.info("⚡ Login via cookies")
+
+            page.goto("https://mb4.bernoulli.com.br/minhaarea")
+
+        else:
+
+            logger.info("🔐 Fazendo login")
+
+            page.goto("https://mb4.bernoulli.com.br/login")
+
+            page.get_by_role("textbox", name="Login").fill(login)
+            page.get_by_role("textbox", name="Senha").fill(senha)
+
+            delay()
+
+            page.get_by_role("button", name="ENTRAR").click()
+
+            page.wait_for_load_state("networkidle")
+
+            salvar_cookies(context)
+
+        delay()
+
+        # -------------------------------
         # IR PARA AGENDA
+        # -------------------------------
+
         page.goto("https://mb4.bernoulli.com.br/minhaarea/agenda")
 
         page.wait_for_selector(".calendario-table-days")
+
+        logger.info("📅 Lendo agenda")
 
         semanas = page.query_selector_all(".calendario-table-days .semana")
 
@@ -46,7 +142,6 @@ def extrair_eventos():
 
                 data = datetime.fromisoformat(data_iso.replace("Z", ""))
 
-                # FILTRO DE DATA
                 if not (hoje <= data.date() <= limite):
                     continue
 
@@ -69,11 +164,10 @@ def extrair_eventos():
 
                     evento = lista_eventos.nth(i)
 
-                    nome = evento.locator(".eventName span").nth(1).inner_text()
-
                     evento.click()
 
                     modal = page.locator(".ModalContent.Event")
+
                     modal.wait_for()
 
                     titulo = modal.locator(".title-24-600").inner_text()
@@ -84,7 +178,6 @@ def extrair_eventos():
 
                     descricao = modal.locator(".event-description").inner_text()
 
-                    # ARQUIVOS
                     arquivos = []
 
                     downloads = modal.locator(".FileDownload")
@@ -116,14 +209,15 @@ def extrair_eventos():
 
                     })
 
-                    # FECHAR MODAL
-                    page.get_by_role("button").filter(
-                        has_text=re.compile(r"^$")
-                    ).nth(4).click()
+                    logger.info(f"📌 Evento capturado: {titulo}")
 
-                    page.wait_for_timeout(500)
+                    # fechar modal
+                    page.keyboard.press("Escape")
+
+                    delay()
 
         browser.close()
 
-    return dados
+    logger.info(f"📊 Total eventos coletados: {len(dados)}")
 
+    return dados

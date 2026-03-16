@@ -1,0 +1,117 @@
+Starting new HTTP connection (1): 127.0.0.1:8080
+http://127.0.0.1:8080 "POST /message/sendText/agenda HTTP/1.1" 201 199
+🚀 Iniciando robô...
+🔎 Sincronizando agenda...
+📲 Enviando WhatsApp...
+✅ Processo finalizado
+Starting new HTTP connection (1): 127.0.0.1:8080
+http://127.0.0.1:8080 "POST /message/sendText/agenda HTTP/1.1" 201 199
+🚀 Iniciando robô...
+🔎 Sincronizando agenda...
+🔎 Buscando conexões de agenda
+Total conexões: 0
+📲 Enviando WhatsApp...
+✅ Processo finalizado
+Starting new HTTP connection (1): 127.0.0.1:8080
+http://127.0.0.1:8080 "POST /message/sendText/agenda HTTP/1.1" 201 199
+🚀 Iniciando robô...
+🔎 Sincronizando agenda...
+🔎 Buscando conexões de agenda
+Total conexões: 1
+🏫 Processando turma: sadfaf
+🤖 Abrindo navegador
+Using selector: EpollSelector
+🌐 Navegador iniciado
+🔐 Fazendo login
+Eventos encontrados: 29
+Erro no robô: 'hash'
+Starting new HTTP connection (1): 127.0.0.1:8080
+http://127.0.0.1:8080 "POST /message/sendText/agenda HTTP/1.1" 201 199
+🚀 Iniciando robô...
+🔎 Sincronizando agenda...
+🔎 Buscando conexões de agenda
+Total conexões: 1
+🏫 Processando turma: sadfaf
+🤖 Abrindo navegador
+Using selector: EpollSelector
+🌐 Navegador iniciado
+🔐 Fazendo login
+Eventos encontrados: 29
+📥 Evento salvo: Aula de Língua Portuguesa
+📥 Evento salvo: Aula de Língua Portuguesa - 8º ano - Dia 4/3/2026
+📥 Evento salvo: Aula de Língua Portuguesa - 8º ano - Dia 4/3/2026
+📥 Evento salvo: Dever de sala e de casa
+📥 Evento salvo: Slides trabalhados em sala
+📥 Evento salvo: Perguntas - Revisão
+📥 Evento salvo: Lista de revisão
+📥 Evento salvo: Gabarito Lista de Revisão AV1
+📥 Evento salvo: Aula de Língua Portuguesa - 8º ano - Dia 4/3/2026
+📥 Evento salvo: Aula de Língua Portuguesa - 8º ano - Dia 4/3/2026
+📥 Evento salvo: Dever de sala e de casa
+📥 Evento salvo: Slides trabalhados em sala
+📥 Evento salvo: Perguntas - Revisão
+📥 Evento salvo: Lista de revisão
+📥 Evento salvo: Gabarito Lista de Revisão AV1
+📥 Evento salvo: Aula de Língua Portuguesa - 8º ano - Dia 4/3/2026
+📥 Evento salvo: Aula de Língua Portuguesa - 8º ano - Dia 4/3/2026
+📥 Evento salvo: Dever de sala e de casa
+📥 Evento salvo: Slides trabalhados em sala
+📥 Evento salvo: Perguntas - Revisão
+📥 Evento salvo: Lista de revisão
+📥 Evento salvo: Gabarito Lista de Revisão AV1
+📥 Evento salvo: Aula de Língua Portuguesa - 8º ano - Dia 4/3/2026
+📥 Evento salvo: Aula de Língua Portuguesa - 8º ano - Dia 4/3/2026
+📥 Evento salvo: Dever de sala e de casa
+📥 Evento salvo: Slides trabalhados em sala
+📥 Evento salvo: Perguntas - Revisão
+📥 Evento salvo: Lista de revisão
+📥 Evento salvo: Gabarito Lista de Revisão AV1
+📲 Enviando WhatsApp...
+Starting new HTTP connection (1): 127.0.0.1:8080
+http://127.0.0.1:8080 "POST /message/sendText/agenda HTTP/1.1" 400 124
+✅ Processo finalizado
+Starting new HTTP connection (1): 127.0.0.1:8080
+http://127.0.0.1:8080 "POST /message/sendText/agenda HTTP/1.1" 201 199
+🚀 Iniciando robô...
+🔎 Sincronizando agenda...
+🔎 Buscando conexões de agenda
+Total conexões: 1
+🏫 Processando turma: sadfaf
+⏳ Sincronização recente, pulando acesso ao site
+📲 Enviando WhatsApp...
+✅ Processo finalizado
+Starting new HTTP connection (1): 127.0.0.1:8080
+http://127.0.0.1:8080 "POST /message/sendText/agenda HTTP/1.1" 201 199
+🚀 Iniciando robô...
+🔎 Sincronizando agenda...
+🔎 Buscando conexões de agenda
+Total conexões: 1
+🏫 Processando turma: sadfaf
+⏳ Sincronização recente, pulando acesso ao site
+📲 Enviando WhatsApp...
+✅ Processo finalizado
+Starting new HTTP connection (1): 127.0.0.1:8080
+http://127.0.0.1:8080 "POST /message/sendText/agenda HTTP/1.1" 201 199
+🚀 Iniciando robô...
+🔎 Sincronizando agenda...
+🔎 Buscando conexões de agenda
+Total conexões: 1
+🏫 Processando turma: sadfaf
+🤖 Iniciando robô
+Using selector: EpollSelector
+🍪 Carregando cookies salvos
+Erro no robô: Expecting value: line 1 column 1 (char 0)
+Starting new HTTP connection (1): 127.0.0.1:8080
+http://127.0.0.1:8080 "POST /message/sendText/agenda HTTP/1.1" 201 199
+🚀 Iniciando robô...
+🔎 Sincronizando agenda...
+🔎 Buscando conexões de agenda
+Total conexões: 1
+🏫 Processando turma: sadfaf
+🤖 Iniciando robô
+Using selector: EpollSelector
+🔐 Fazendo login
+❌ ERRO NO ROBÔ
+Timeout 30000ms exceeded.
+Starting new HTTP connection (1): 127.0.0.1:8080
+http://127.0.0.1:8080 "POST /message/sendText/agenda HTTP/1.1" 201 199
