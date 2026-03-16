@@ -115,3 +115,4 @@ Using selector: EpollSelector
 Timeout 30000ms exceeded.
 Starting new HTTP connection (1): 127.0.0.1:8080
 http://127.0.0.1:8080 "POST /message/sendText/agenda HTTP/1.1" 201 199
+Watching for file changes with StatReloader
