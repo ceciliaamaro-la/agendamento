@@ -156,7 +156,14 @@ textarea{
 }
 
 </style>
-    <title>{% block title %}{% endblock %} | Carteira Digital</title>
+    <title>{% block title %}{% endblock %} | Agenda Escolar</title>
+
+    <style>
+        /* Sidebar layout */
+        @media (min-width: 992px) {
+            body { padding-right: 230px; }
+        }
+    </style>
 </head>
 <body class="loading">
     <!-- Preloader -->
@@ -172,7 +179,7 @@ textarea{
     {% include 'navbar.html' %}
 
     <!-- Conteúdo Principal -->
-    <main class="container mt-4 mb-5">
+    <main class="container-fluid px-3 px-md-4 mt-3 mt-lg-4 mb-5">
         {% if messages %}
         <div class="alert-messages">
             {% for message in messages %}
@@ -191,57 +198,24 @@ textarea{
     {% endblock %}
 
     {% if user.is_authenticated %}
-   <!-- Botões Flutuantes -->
-<div id="fab-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 1050;">
-  <!-- Botão principal -->
-  <button id="fab-main" class="btn btn-primary shadow btn-fab" title="Menu">
-    <i class="bi bi-plus-lg"></i>
-  </button>
-
-  <!-- Botões secundários -->
-  <div id="fab-actions" class="d-none flex-column align-items-end mt-2">
-    <!-- Modo escuro -->
-    <button class="btn btn-dark shadow btn-fab mb-4" onclick="toggleDarkMode()">
-      <span class="fab-label">Modo Escuro</span>
-      <i class="bi bi-moon-stars"></i>
-    </button>
-
-    <!-- Calendário -->
-    <a href="{% url 'cal:calendar' %}" class="btn btn-secondary shadow btn-fab mb-2">
-      <span class="fab-label">Calendário</span>
-      <i class="bi bi-calendar-event"></i>
-    </a>
-
-    <!-- Anual -->
-    <a href="{% url 'cal:listar_transacoes' %}" class="btn btn-success shadow btn-fab mb-2">
-      <span class="fab-label">Despesas</span>
-      <i class="bi bi-list-ul"></i>
-    </a>
-
-    
-
-    <!-- Nova despesa -->
-    <a href="{% url 'cal:transacao_nova' %}" class="btn btn-danger shadow btn-fab mb-2">
-      <span class="fab-label">Novo Lançamento</span>
-      <i class="bi bi-plus-circle"></i>
-    </a>
-      <!-- Home -->
-      <a href="{% url 'cal:home' %}" class="btn btn-info shadow btn-fab mb-2">
-        <span class="fab-label">Home</span>
-        <i class="bi bi-house-fill"></i>
-      </a>
-
-
-
-  </div>
-</div>
-
-  <!-- Botão Voltar (Esquerda do FAB Principal) -->
-  <button onclick="window.history.back()" class="btn btn-secondary shadow btn-fab" title="Voltar">
-    <i class="bi bi-arrow-left"></i>
-  </button>
-</div>
-{% endif %}
+    <!-- Botões Flutuantes -->
+    <div style="position:fixed;bottom:20px;left:20px;z-index:1050;display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
+        <!-- Voltar -->
+        <button onclick="window.history.back()"
+                class="btn btn-secondary shadow-sm d-flex align-items-center gap-1"
+                title="Voltar" style="border-radius:50px;">
+            <i class="bi bi-arrow-left"></i>
+            <span class="d-none d-sm-inline small">Voltar</span>
+        </button>
+        <!-- Modo escuro -->
+        <button onclick="toggleDarkMode()"
+                class="btn btn-dark shadow-sm d-flex align-items-center gap-1"
+                title="Alternar modo escuro" style="border-radius:50px;">
+            <i class="bi bi-moon-stars"></i>
+            <span class="d-none d-sm-inline small">Modo Escuro</span>
+        </button>
+    </div>
+    {% endif %}
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
@@ -307,28 +281,19 @@ textarea{
 </script>
 <script>
 $(document).ready(function(){
-  // FAB Toggle
-  $('#fab-main').on('click', function(e) {
-    e.stopPropagation();
-    $('#fab-actions').toggleClass('d-none').toggleClass('d-flex');
-  });
-
-  // Close FAB when clicking outside
-  $(document).on('click', function() {
-    $('#fab-actions').addClass('d-none').removeClass('d-flex');
-  });
-
-  // Input mask
-  $('#id_limite').inputmask('decimal', {
-    'alias': 'numeric',
-    'groupSeparator': '.',
-    'autoGroup': true,
-    'digits': 2,
-    'digitsOptional': false,
-    'placeholder': '0',
-    'radixPoint': ',',
-    'rightAlign': false
-  });
+  // Input mask (se existir campo com esse id)
+  if ($('#id_limite').length) {
+    $('#id_limite').inputmask('decimal', {
+      'alias': 'numeric',
+      'groupSeparator': '.',
+      'autoGroup': true,
+      'digits': 2,
+      'digitsOptional': false,
+      'placeholder': '0',
+      'radixPoint': ',',
+      'rightAlign': false
+    });
+  }
 });
 </script>
 

@@ -1,127 +1,52 @@
-<nav class="navbar navbar-expand-md navbar-dark bg-dark">
+{% load static %}
+
+{# ── Top bar (visível apenas em mobile) ─────────────────────────────────────── #}
+<nav class="navbar navbar-dark bg-dark shadow-sm d-lg-none sticky-top" style="z-index:1040;">
     <div class="container-fluid">
-        
-<a class="navbar-brand" href="{% url 'cal:home' %}">
-    <i class="bi bi-house-fill"></i>
-</a>
-
-{% if user.is_authenticated %}
-<div class="navbar-text d-flex align-items-center me-auto">
-    <span class="badge {% if saldo_total_nav >= 0 %}bg-success{% else %}bg-danger{% endif %} me-1" title="Saldo Atual ({{ month_name|capfirst }})">
-        {{ saldo_total_nav|floatformat:0 }}
-    </span>
-    <span class="badge {% if saldo_total_prox_nav >= 0 %}bg-info{% else %}bg-warning{% endif %} text-dark" title="Saldo Próximo Mês ({{ mes_proximo_nome|capfirst }})">
-        {{ saldo_total_prox_nav|floatformat:0 }}
-    </span>
-</div>
-{% endif %}
-
-        <!-- Botão Toggler para Offcanvas -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar">
+        <a class="navbar-brand fw-semibold" href="{% url 'cal:home' %}">
+            <i class="bi bi-calendar2-week me-1 text-primary"></i>Agenda
+        </a>
+        {% if user.is_authenticated %}
+        <button class="navbar-toggler border-0 p-1" type="button"
+                data-bs-toggle="offcanvas" data-bs-target="#sidebarMobile"
+                aria-controls="sidebarMobile">
             <span class="navbar-toggler-icon"></span>
         </button>
-        
-        <!-- Offcanvas Menu -->
-        <div class="offcanvas offcanvas-end bg-dark text-white" tabindex="-1" id="offcanvasNavbar">
-            <div class="offcanvas-header">
-                <h5 class="offcanvas-title">Menu</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-            </div>
-            
-            <div class="offcanvas-body">
-                <ul class="navbar-nav me-auto">
-                    {% if user.is_authenticated %}
-                    <!-- Navbar -->
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'cal:home' %}">
-      <i class="bi bi-journal-check"></i> Tarefas
-    </a>
-</li>
-<li class="nav-item">
-    <a class="nav-link" href="{% url 'cal:calendar' %}">
-      <i class="bi bi-calendar-event"></i> Calendário
-    </a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="{% url 'cal:transacao_nova' %}">
-      <i class="bi bi-plus-circle-fill"></i> Novo Lançamento
-    </a>
-  </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'cal:listar_transacoes' %}"><i class="bi bi-list-ul"></i> Despesas</a>
-                      </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'cal:resumo_categoria' %}">
-                          <i class="bi bi-pie-chart-fill"></i> Balanço Mensal
-                        </a>
-                    
-  <li class="nav-item">
-    <a class="nav-link" href="{% url 'cal:dashboard' %}">
-      <i class="bi bi-graph-up"></i> Balanço Anual
-    </a>
-  </li>
-  
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="{% url 'cal:metas_categoria' %}">
-      <i class="bi bi-bullseye"></i> Metas
-    </a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="{% url 'cal:cartoes_resumo' %}">
-      <i class="bi bi-credit-card-2-back-fill"></i> Cartões
-    </a>
-  </li>
-  
-  <li class="nav-item">
-    <a class="nav-link" href="{% url 'cal:categorias' %}"><i class="bi bi-tags-fill"></i> Categorias</a>
-  </li>
-  
-                    {% endif %}
-                    {% if user.is_authenticated and user.is_staff %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'cal:tipo_list' %}"><i class="bi bi-toggles2"></i> Tipos</a>
-                    </li>
-
-                    
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'cal:listar_usuarios' %}"><i class="bi bi-person-gear"></i> Usuários</a>
-                    </li>
-                    {% endif %}
-
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'cal:contato' %}"><i class="bi bi-person-vcard"></i> Contato</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'cal:manual_publico' %}"><i class="bi bi-book"></i> Manual</a>
-                    </li>
-                </ul>
-
-                <ul class="navbar-nav ms-auto">
-                    {% if user.is_authenticated %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'cal:perfil' %}">
-                            <i class="bi bi-person-circle"></i> Perfil
-                        </a>
-                    </li>
-                    <li class="nav-link">
-                        <span class="navbar-text me-3">
-                          Olá, {{ user.username }}
-                        </span>
-                      </li>
-                    <li class="nav-item">                    
-                            <form method="post" action="{% url 'logout' %}" class="d-flex">
-                                {% csrf_token %}
-                                
-                                <button type="submit" class="btn btn-outline-danger">Sair</button>
-                            </form>
-                        {% else %}
-                            <a href="{% url 'login' %}" class="btn btn-outline-success">Login</a>
-                        {% endif %}
-                    </li>
-                </ul>
-            </div>
-        </div>
+        {% else %}
+        <a href="{% url 'login' %}" class="btn btn-sm btn-outline-success">Login</a>
+        {% endif %}
     </div>
 </nav>
+
+{% if user.is_authenticated %}
+
+{# ── Mobile: Offcanvas da direita ────────────────────────────────────────────── #}
+<div class="offcanvas offcanvas-end bg-dark text-white border-0"
+     tabindex="-1" id="sidebarMobile" style="width:260px;">
+    <div class="offcanvas-header border-bottom border-secondary">
+        <div>
+            <i class="bi bi-calendar2-week text-primary fs-4 me-2"></i>
+            <span class="fw-bold">Agenda Escolar</span>
+        </div>
+        <button type="button" class="btn-close btn-close-white"
+                data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        {% include 'sidebar_menu.html' %}
+    </div>
+</div>
+
+{# ── Desktop: Sidebar fixa à direita ─────────────────────────────────────────── #}
+<div id="sidebar-desktop"
+     class="d-none d-lg-flex flex-column bg-dark text-white shadow-lg"
+     style="position:fixed;top:0;right:0;width:230px;height:100vh;z-index:1030;overflow-y:auto;">
+    <div class="p-3 border-bottom border-secondary">
+        <a href="{% url 'cal:home' %}" class="text-decoration-none text-white">
+            <i class="bi bi-calendar2-week text-primary fs-5 me-2"></i>
+            <span class="fw-bold">Agenda Escolar</span>
+        </a>
+    </div>
+    {% include 'sidebar_menu.html' %}
+</div>
+
+{% endif %}
