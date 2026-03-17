@@ -204,16 +204,8 @@ textarea{
     {% endblock %}
 
     {% if user.is_authenticated %}
-    <!-- Botões Flutuantes -->
-    <div style="position:fixed;bottom:20px;left:20px;z-index:1050;display:flex;flex-direction:column;gap:8px;align-items:flex-start;">
-        <!-- Voltar -->
-        <button onclick="window.history.back()"
-                class="btn btn-secondary shadow-sm d-flex align-items-center gap-1"
-                title="Voltar" style="border-radius:50px;">
-            <i class="bi bi-arrow-left"></i>
-            <span class="d-none d-sm-inline small">Voltar</span>
-        </button>
-        <!-- Modo escuro -->
+    <!-- Botão Dark Mode Flutuante -->
+    <div style="position:fixed;bottom:20px;left:20px;z-index:1050;">
         <button onclick="toggleDarkMode()"
                 class="btn btn-dark shadow-sm d-flex align-items-center gap-1"
                 title="Alternar modo escuro" style="border-radius:50px;">
