@@ -17,7 +17,39 @@
         </div>
     </div>
 
-    <div class="row g-4">
+    {# ── Seção Principal ── #}
+    <h6 class="text-uppercase text-muted fw-semibold mb-3" style="letter-spacing:.08em;">Minhas Tarefas</h6>
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-journal-check fs-1 text-primary mb-3 d-block"></i>
+                    <h5 class="card-title fw-semibold">Tarefas do Aluno</h5>
+                    <p class="text-muted small">Veja as tarefas pendentes e concluídas do seu filho(a).</p>
+                    <a href="{% url 'cal:listar_tarefas' %}" class="btn btn-primary btn-sm mt-auto">
+                        <i class="bi bi-arrow-right-circle me-1"></i> Acessar
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-calendar-event fs-1 text-warning mb-3 d-block"></i>
+                    <h5 class="card-title fw-semibold">Eventos da Agenda</h5>
+                    <p class="text-muted small">Visualize todos os eventos sincronizados da turma.</p>
+                    <a href="{% url 'cal:agenda_list' %}" class="btn btn-outline-warning btn-sm mt-auto">
+                        <i class="bi bi-arrow-right-circle me-1"></i> Acessar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if user.is_staff %}
+    {# ── Seção Cadastros (staff) ── #}
+    <h6 class="text-uppercase text-muted fw-semibold mb-3 mt-2" style="letter-spacing:.08em;">Cadastros</h6>
+    <div class="row g-4 mb-4">
 
         <div class="col-12 col-md-6 col-xl-3">
             <div class="card border-0 shadow-sm h-100">
@@ -36,9 +68,9 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body text-center py-4">
                     <i class="bi bi-people fs-1 text-success mb-3 d-block"></i>
-                    <h5 class="card-title fw-semibold">Turmas e Alunos</h5>
-                    <p class="text-muted small">Organize turmas e alunos por escola.</p>
-                    <a href="{% url 'cal:aluno_list' %}" class="btn btn-outline-success btn-sm mt-auto">
+                    <h5 class="card-title fw-semibold">Turmas</h5>
+                    <p class="text-muted small">Organize as turmas por escola.</p>
+                    <a href="{% url 'cal:turma_list' %}" class="btn btn-outline-success btn-sm mt-auto">
                         <i class="bi bi-arrow-right-circle me-1"></i> Acessar
                     </a>
                 </div>
@@ -48,22 +80,9 @@
         <div class="col-12 col-md-6 col-xl-3">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body text-center py-4">
-                    <i class="bi bi-calendar-event fs-1 text-warning mb-3 d-block"></i>
-                    <h5 class="card-title fw-semibold">Eventos da Agenda</h5>
-                    <p class="text-muted small">Visualize provas, tarefas e trabalhos.</p>
-                    <a href="{% url 'cal:agenda_list' %}" class="btn btn-outline-warning btn-sm mt-auto">
-                        <i class="bi bi-arrow-right-circle me-1"></i> Acessar
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center py-4">
-                    <i class="bi bi-journal-check fs-1 text-info mb-3 d-block"></i>
-                    <h5 class="card-title fw-semibold">Tarefas do Aluno</h5>
-                    <p class="text-muted small">Acompanhe o progresso de cada aluno.</p>
+                    <i class="bi bi-person-lines-fill fs-1 text-info mb-3 d-block"></i>
+                    <h5 class="card-title fw-semibold">Alunos</h5>
+                    <p class="text-muted small">Gerencie alunos e vínculos com usuários.</p>
                     <a href="{% url 'cal:aluno_list' %}" class="btn btn-outline-info btn-sm mt-auto">
                         <i class="bi bi-arrow-right-circle me-1"></i> Acessar
                     </a>
@@ -71,7 +90,21 @@
             </div>
         </div>
 
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-plug fs-1 text-warning mb-3 d-block"></i>
+                    <h5 class="card-title fw-semibold">Conexões</h5>
+                    <p class="text-muted small">Credenciais do robô Bernoulli por turma.</p>
+                    <a href="{% url 'cal:conexao_list' %}" class="btn btn-outline-warning btn-sm mt-auto">
+                        <i class="bi bi-arrow-right-circle me-1"></i> Acessar
+                    </a>
+                </div>
+            </div>
+        </div>
+
     </div>
+    {% endif %}
 
     {% else %}
 

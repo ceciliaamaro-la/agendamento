@@ -63,6 +63,6 @@ urlpatterns = [
     path('whatsapp/<int:pk>/excluir/', views_whats.whats_delete, name='whats_delete'),
 
     # ─── Tarefas ───────────────────────────────────────────────────────────────
-    path('tarefas/<int:aluno_id>/', views_tarefas.listar_tarefas, name='listar_tarefas'),
+    path('tarefas/', views_tarefas.listar_tarefas, name='listar_tarefas'),
     path('tarefa/concluir/', views_tarefas.marcar_concluida, name='marcar_concluida'),
 ]

@@ -13,6 +13,13 @@
         <span>Início</span>
     </a>
 
+    <a href="{% url 'cal:listar_tarefas' %}"
+       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
+              {% if 'tarefas' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <i class="bi bi-journal-check fs-5"></i>
+        <span>Minhas Tarefas</span>
+    </a>
+
     <a href="{% url 'cal:agenda_list' %}"
        class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
               {% if 'agenda' in request.resolver_match.url_name|default:'' %}active{% endif %}">

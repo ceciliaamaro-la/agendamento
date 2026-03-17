@@ -25,9 +25,10 @@ class TurmaAdmin(admin.ModelAdmin):
 
 @admin.register(Aluno)
 class AlunoAdmin(admin.ModelAdmin):
-    list_display = ("nome_aluno", "turma", "email", "telefone", "criado_em")
+    list_display = ("nome_aluno", "turma", "criado_em")
     list_filter = ("turma",)
-    search_fields = ("nome_aluno", "email")
+    search_fields = ("nome_aluno",)
+    filter_horizontal = ("usuarios",)
 
 
 @admin.register(ConexaoAgenda)

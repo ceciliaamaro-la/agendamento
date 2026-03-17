@@ -3,83 +3,125 @@
 {% block title %}Tarefas — {{ aluno.nome_aluno }}{% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-    <div>
-        <h4 class="mb-0">
-            <i class="bi bi-journal-check text-primary"></i>
-            Tarefas da Turma
-        </h4>
-        <small class="text-muted">
-            {{ aluno.nome_aluno }}
-            {% if aluno.turma %} &mdash; {{ aluno.turma }}{% endif %}
-        </small>
+<div class="container-fluid py-2">
+
+    {# ── Cabeçalho + seletor de aluno ── #}
+    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+        <div>
+            <h4 class="mb-0">
+                <i class="bi bi-journal-check text-primary"></i>
+                Tarefas
+            </h4>
+            <small class="text-muted">
+                {{ aluno.nome_aluno }}
+                {% if aluno.turma %} &mdash; {{ aluno.turma }}{% endif %}
+                &bull; {{ data_inicio|date:"d/m" }} a {{ data_fim|date:"d/m/Y" }}
+            </small>
+        </div>
+
+        {% if alunos|length > 1 %}
+        <form method="get" class="d-flex align-items-center gap-2">
+            <label class="form-label mb-0 small fw-semibold">Aluno:</label>
+            <select name="aluno_id" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width:160px;">
+                {% for a in alunos %}
+                <option value="{{ a.pk }}" {% if a.pk == aluno.pk %}selected{% endif %}>
+                    {{ a.nome_aluno }}{% if a.turma %} ({{ a.turma }}){% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+        {% endif %}
     </div>
-    <span class="badge bg-secondary fs-6" id="contador-pendentes">
-        {% with total=tarefas|length %}
-            {{ total }} tarefa{{ total|pluralize:"s" }}
-        {% endwith %}
-    </span>
-</div>
 
-{% if not tarefas %}
-    <div class="alert alert-info d-flex align-items-center gap-2" role="alert">
-        <i class="bi bi-info-circle-fill fs-5"></i>
-        <span>Nenhuma tarefa encontrada para esta turma.</span>
+    {# ── Pendentes ── #}
+    <div class="mb-2 d-flex align-items-center gap-2">
+        <h5 class="mb-0 fw-semibold text-danger"><i class="bi bi-hourglass-split"></i> Pendentes</h5>
+        <span class="badge bg-danger rounded-pill">{{ pendentes|length }}</span>
     </div>
-{% endif %}
 
-<div class="row g-3" id="lista-tarefas">
-{% for item in tarefas %}
-    {% with evento=item.evento concluida=item.concluida %}
-    <div class="col-12 col-md-6 col-xl-4 tarefa-card" data-concluida="{{ concluida|yesno:'true,false' }}">
-        <div class="card h-100 shadow-sm border-0
-            {% if concluida %}border-start border-success border-4 opacity-75{% else %}border-start border-primary border-4{% endif %}"
-            id="card-{{ evento.id }}">
-            <div class="card-body">
-
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="badge
-                        {% if evento.tipo|lower == 'prova' %}bg-danger
-                        {% elif evento.tipo|lower == 'tarefa' %}bg-warning text-dark
-                        {% else %}bg-info text-dark{% endif %}">
-                        {{ evento.tipo }}
-                    </span>
-                    <small class="text-muted">
-                        <i class="bi bi-calendar3"></i>
-                        {{ evento.data|date:"d/m/Y" }}
-                    </small>
-                </div>
-
-                <h6 class="card-title fw-bold mb-1" id="titulo-{{ evento.id }}">
-                    {% if concluida %}
-                        <s class="text-muted">{{ evento.titulo }}</s>
-                    {% else %}
-                        {{ evento.titulo }}
+    {% if not pendentes %}
+    <div class="alert alert-success d-flex align-items-center gap-2 mb-4" role="alert">
+        <i class="bi bi-check-circle-fill fs-5"></i>
+        <span>Nenhuma tarefa pendente neste período. </span>
+    </div>
+    {% else %}
+    <div class="row g-3 mb-4" id="lista-pendentes">
+        {% for item in pendentes %}
+        {% with evento=item.evento %}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card h-100 shadow-sm border-0 border-start border-4 border-danger" id="card-{{ evento.id }}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge
+                            {% if evento.tipo|lower == 'prova' %}bg-danger
+                            {% elif evento.tipo|lower == 'tarefa' %}bg-warning text-dark
+                            {% else %}bg-info text-dark{% endif %}">
+                            {{ evento.tipo }}
+                        </span>
+                        <small class="text-muted">
+                            <i class="bi bi-calendar3"></i>
+                            {{ evento.data|date:"d/m/Y" }}
+                            {% if evento.data == hoje %}<span class="badge bg-danger ms-1">Hoje</span>{% endif %}
+                        </small>
+                    </div>
+                    <h6 class="card-title fw-bold mb-1" id="titulo-{{ evento.id }}">{{ evento.titulo }}</h6>
+                    {% if evento.descricao %}
+                    <p class="card-text text-muted small mb-3" style="white-space: pre-line;">{{ evento.descricao|truncatechars:180 }}</p>
                     {% endif %}
-                </h6>
-
-                {% if evento.descricao %}
-                <p class="card-text text-muted small mb-3" style="white-space: pre-line;">{{ evento.descricao|truncatechars:180 }}</p>
-                {% endif %}
-
-                <button
-                    class="btn btn-sm w-100 btn-marcar
-                        {% if concluida %}btn-outline-secondary{% else %}btn-outline-success{% endif %}"
-                    data-evento-id="{{ evento.id }}"
-                    data-aluno-id="{{ aluno.id }}"
-                    id="btn-{{ evento.id }}">
-                    <i class="bi {% if concluida %}bi-arrow-counterclockwise{% else %}bi-check2-circle{% endif %} me-1"
-                       id="icon-{{ evento.id }}"></i>
-                    <span id="label-{{ evento.id }}">
-                        {% if concluida %}Desmarcar{% else %}Marcar como concluída{% endif %}
-                    </span>
-                </button>
-
+                    <button class="btn btn-sm w-100 btn-outline-success btn-marcar"
+                        data-evento-id="{{ evento.id }}"
+                        data-aluno-id="{{ aluno.id }}"
+                        id="btn-{{ evento.id }}">
+                        <i class="bi bi-check2-circle me-1" id="icon-{{ evento.id }}"></i>
+                        <span id="label-{{ evento.id }}">Marcar como concluída</span>
+                    </button>
+                </div>
             </div>
         </div>
+        {% endwith %}
+        {% endfor %}
     </div>
-    {% endwith %}
-{% endfor %}
+    {% endif %}
+
+    {# ── Concluídas ── #}
+    <div class="mb-2 d-flex align-items-center gap-2">
+        <h5 class="mb-0 fw-semibold text-success"><i class="bi bi-check2-all"></i> Concluídas</h5>
+        <span class="badge bg-success rounded-pill">{{ concluidas|length }}</span>
+    </div>
+
+    {% if not concluidas %}
+    <p class="text-muted small">Nenhuma tarefa concluída neste período.</p>
+    {% else %}
+    <div class="row g-3" id="lista-concluidas">
+        {% for item in concluidas %}
+        {% with evento=item.evento %}
+        <div class="col-12 col-md-6 col-xl-4 opacity-75">
+            <div class="card h-100 shadow-sm border-0 border-start border-4 border-success" id="card-{{ evento.id }}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge bg-secondary">{{ evento.tipo }}</span>
+                        <small class="text-muted">
+                            <i class="bi bi-calendar3"></i> {{ evento.data|date:"d/m/Y" }}
+                        </small>
+                    </div>
+                    <h6 class="card-title mb-1" id="titulo-{{ evento.id }}">
+                        <s class="text-muted">{{ evento.titulo }}</s>
+                    </h6>
+                    <button class="btn btn-sm w-100 btn-outline-secondary btn-marcar"
+                        data-evento-id="{{ evento.id }}"
+                        data-aluno-id="{{ aluno.id }}"
+                        id="btn-{{ evento.id }}">
+                        <i class="bi bi-arrow-counterclockwise me-1" id="icon-{{ evento.id }}"></i>
+                        <span id="label-{{ evento.id }}">Desmarcar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
 </div>
 {% endblock %}
 
@@ -113,38 +155,13 @@
                     btn.disabled = false;
                     return;
                 }
-
-                const concluida = data.concluida;
-                const card      = document.getElementById("card-" + eventoId);
-                const titulo    = document.getElementById("titulo-" + eventoId);
-                const icon      = document.getElementById("icon-" + eventoId);
-                const label     = document.getElementById("label-" + eventoId);
-
-                if (concluida) {
-                    card.classList.add("opacity-75");
-                    card.classList.replace("border-primary", "border-success");
-                    titulo.innerHTML = "<s class='text-muted'>" + titulo.textContent.trim() + "</s>";
-                    btn.className = "btn btn-sm w-100 btn-marcar btn-outline-secondary";
-                    icon.className = "bi bi-arrow-counterclockwise me-1";
-                    label.textContent = "Desmarcar";
-                } else {
-                    card.classList.remove("opacity-75");
-                    card.classList.replace("border-success", "border-primary");
-                    titulo.innerHTML = titulo.querySelector("s")
-                        ? titulo.querySelector("s").textContent.trim()
-                        : titulo.textContent.trim();
-                    btn.className = "btn btn-sm w-100 btn-marcar btn-outline-success";
-                    icon.className = "bi bi-check2-circle me-1";
-                    label.textContent = "Marcar como concluída";
-                }
-
-                btn.disabled = false;
+                // Reload to re-render sections correctly
+                window.location.reload();
             })
             .catch(function (err) {
                 console.error(err);
                 alert("Erro de conexão. Tente novamente.");
                 btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Marcar como concluída';
             });
         });
     });

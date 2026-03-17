@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 
 @login_required
 def aluno_list(request):
-    alunos = Aluno.objects.select_related('turma').all()
+    alunos = Aluno.objects.select_related('turma').prefetch_related('usuarios').all()
     return render(request, 'aluno/list.html', {'alunos': alunos})
 
 @login_required
@@ -14,7 +14,7 @@ def aluno_create(request):
     if request.method == 'POST':
         form = AlunoForm(request.POST)
         if form.is_valid():
-            form.save()
+            aluno = form.save()
             messages.success(request, 'Aluno criado com sucesso!')
             return redirect('cal:aluno_list')
     else:

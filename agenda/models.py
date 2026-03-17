@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.auth.models import User
+
 
 class Escola(models.Model):
 
@@ -8,9 +10,7 @@ class Escola(models.Model):
         null=True
     )
 
-    criado_em = models.DateTimeField(
-        auto_now_add=True
-    )
+    criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.nome_escola or "Escola"
@@ -31,9 +31,7 @@ class Turma(models.Model):
         null=True
     )
 
-    criado_em = models.DateTimeField(
-        auto_now_add=True
-    )
+    criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.nome_turma or "Turma"
@@ -54,27 +52,18 @@ class Aluno(models.Model):
         null=True
     )
 
-    email = models.TextField(
+    usuarios = models.ManyToManyField(
+        User,
         blank=True,
-        null=True
+        related_name='alunos',
+        verbose_name='Usuários vinculados'
     )
 
-    senha = models.TextField(
-        blank=True,
-        null=True
-    )
-    telefone = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True
-    )
-
-    criado_em = models.DateTimeField(
-        auto_now_add=True
-    )
+    criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.nome_aluno or "Aluno"
+
 
 class ConexaoAgenda(models.Model):
 
@@ -95,6 +84,7 @@ class ConexaoAgenda(models.Model):
     def __str__(self):
         return f"{self.turma.nome_turma}"
 
+
 class AgendaEvento(models.Model):
 
     turma = models.ForeignKey(
@@ -103,43 +93,29 @@ class AgendaEvento(models.Model):
         null=True,
         blank=True
     )
+
     data = models.DateField()
 
-    dia = models.CharField(
-        max_length=5
-    )
+    dia = models.CharField(max_length=5)
 
-    titulo = models.CharField(
-        max_length=255
-    )
+    titulo = models.CharField(max_length=255)
 
-    tipo = models.CharField(
-        max_length=50
-    )
+    tipo = models.CharField(max_length=50)
 
-    datas = models.CharField(
-        max_length=100
-    )
+    datas = models.CharField(max_length=100)
 
     descricao = models.TextField()
 
-    hash = models.CharField(
-        max_length=64,
-        unique=True
-    )
+    hash = models.CharField(max_length=64, unique=True)
 
-    enviado_whatsapp = models.BooleanField(
-        default=False
-    )
+    enviado_whatsapp = models.BooleanField(default=False)
 
-    criado_em = models.DateTimeField(
-        auto_now_add=True
-    )
+    criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-
         return f"{self.data} - {self.titulo}"
-    
+
+
 class TarefaCompleta(models.Model):
 
     aluno = models.ForeignKey(
@@ -171,13 +147,9 @@ class WhatsAppEnvio(models.Model):
         on_delete=models.CASCADE
     )
 
-    hash_evento = models.CharField(
-        max_length=64
-    )
+    hash_evento = models.CharField(max_length=64)
 
-    enviado_em = models.DateTimeField(
-        auto_now_add=True
-    )
+    enviado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ("turma", "hash_evento")
