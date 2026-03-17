@@ -4,15 +4,100 @@
 {% block content %}
 <div class="container mt-4">
     <div class="row justify-content-center">
-        <div class="col-md-7">
+        <div class="col-md-9">
             <div class="card shadow-sm">
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0"><i class="bi bi-person-lines-fill"></i> {{ titulo }}</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post">
+                    <form method="post" id="aluno-form">
                         {% csrf_token %}
+
                         {% for field in form %}
+                        {% if field.html_name == 'usuarios' %}
+
+                        {# ── Dual-list widget para usuários ── #}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">{{ field.label }}</label>
+                            {% if field.errors %}
+                            <div class="text-danger small mb-1">{{ field.errors }}</div>
+                            {% endif %}
+
+                            {# hidden select enviado ao servidor #}
+                            <div style="display:none;">{{ field }}</div>
+
+                            <div class="dual-list-widget border rounded-3 p-3 bg-light">
+                                <div class="row g-3 align-items-start">
+
+                                    {# ── Painel Disponíveis ── #}
+                                    <div class="col-12 col-sm-5">
+                                        <div class="fw-semibold small text-muted mb-1">
+                                            <i class="bi bi-people me-1"></i>Disponíveis
+                                            <span class="badge bg-secondary ms-1" id="count-avail">0</span>
+                                        </div>
+                                        <div class="input-group input-group-sm mb-2">
+                                            <span class="input-group-text bg-white border-end-0">
+                                                <i class="bi bi-search text-muted"></i>
+                                            </span>
+                                            <input type="text" id="filter-avail" class="form-control border-start-0"
+                                                   placeholder="Filtrar…" autocomplete="off">
+                                        </div>
+                                        <select id="list-avail" class="form-select dual-list-select" multiple
+                                                style="min-height:180px; border-radius:.5rem;">
+                                        </select>
+                                    </div>
+
+                                    {# ── Botões do meio ── #}
+                                    <div class="col-12 col-sm-2 d-flex flex-sm-column flex-row justify-content-center align-items-center gap-2 pt-sm-4">
+                                        <button type="button" id="btn-add-all"
+                                                class="btn btn-sm btn-outline-primary w-100" title="Adicionar todos">
+                                            <i class="bi bi-chevron-double-right d-none d-sm-inline"></i>
+                                            <i class="bi bi-chevron-double-down d-sm-none"></i>
+                                        </button>
+                                        <button type="button" id="btn-add"
+                                                class="btn btn-sm btn-primary w-100" title="Adicionar selecionados">
+                                            <i class="bi bi-chevron-right d-none d-sm-inline"></i>
+                                            <i class="bi bi-chevron-down d-sm-none"></i>
+                                        </button>
+                                        <button type="button" id="btn-remove"
+                                                class="btn btn-sm btn-danger w-100" title="Remover selecionados">
+                                            <i class="bi bi-chevron-left d-none d-sm-inline"></i>
+                                            <i class="bi bi-chevron-up d-sm-none"></i>
+                                        </button>
+                                        <button type="button" id="btn-remove-all"
+                                                class="btn btn-sm btn-outline-danger w-100" title="Remover todos">
+                                            <i class="bi bi-chevron-double-left d-none d-sm-inline"></i>
+                                            <i class="bi bi-chevron-double-up d-sm-none"></i>
+                                        </button>
+                                    </div>
+
+                                    {# ── Painel Escolhidos ── #}
+                                    <div class="col-12 col-sm-5">
+                                        <div class="fw-semibold small text-primary mb-1">
+                                            <i class="bi bi-person-check me-1"></i>Escolhidos
+                                            <span class="badge bg-primary ms-1" id="count-chosen">0</span>
+                                        </div>
+                                        <div class="input-group input-group-sm mb-2">
+                                            <span class="input-group-text bg-white border-end-0">
+                                                <i class="bi bi-search text-muted"></i>
+                                            </span>
+                                            <input type="text" id="filter-chosen" class="form-control border-start-0"
+                                                   placeholder="Filtrar…" autocomplete="off">
+                                        </div>
+                                        <select id="list-chosen" class="form-select dual-list-select dual-list-chosen" multiple
+                                                style="min-height:180px; border-radius:.5rem;">
+                                        </select>
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div class="form-text text-muted small mt-1">
+                                Selecione itens e use os botões para mover entre os painéis.
+                            </div>
+                        </div>
+
+                        {% else %}
+
                         <div class="mb-3">
                             <label class="form-label fw-semibold">{{ field.label }}</label>
                             {{ field }}
@@ -23,8 +108,11 @@
                             <div class="text-danger small">{{ field.errors }}</div>
                             {% endif %}
                         </div>
+
+                        {% endif %}
                         {% endfor %}
-                        <div class="d-flex gap-2">
+
+                        <div class="d-flex gap-2 mt-3">
                             <button type="submit" class="btn btn-success">
                                 <i class="bi bi-check-circle"></i> Salvar
                             </button>
@@ -38,4 +126,115 @@
         </div>
     </div>
 </div>
+
+<style>
+.dual-list-widget { background: var(--bs-light, #f8f9fa); }
+body.dark-mode .dual-list-widget { background: #1e2530; border-color: #444 !important; }
+body.dark-mode .dual-list-select { background: #252d38; color: #e9ecef; border-color: #444; }
+body.dark-mode .input-group-text { background: #2b3440 !important; border-color: #444; color: #adb5bd; }
+body.dark-mode #filter-avail, body.dark-mode #filter-chosen {
+    background: #2b3440; color: #e9ecef; border-color: #444;
+}
+.dual-list-select option { padding: 4px 8px; cursor: pointer; border-radius: 4px; }
+.dual-list-select option:checked { background: #0d6efd; color: #fff; }
+.dual-list-chosen option:checked { background: #198754; color: #fff; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const hiddenSelect = document.getElementById('id_usuarios');
+    const listAvail   = document.getElementById('list-avail');
+    const listChosen  = document.getElementById('list-chosen');
+    const filterAvail = document.getElementById('filter-avail');
+    const filterChosen= document.getElementById('filter-chosen');
+
+    if (!hiddenSelect) return;
+
+    /* ── Build both lists from the hidden <select> ── */
+    function init() {
+        const allOptions = Array.from(hiddenSelect.options);
+        allOptions.forEach(opt => {
+            const clone = new Option(opt.text, opt.value);
+            if (opt.selected) {
+                listChosen.appendChild(clone);
+            } else {
+                listAvail.appendChild(clone);
+            }
+        });
+        sortList(listAvail);
+        sortList(listChosen);
+        updateCounts();
+    }
+
+    function sortList(sel) {
+        const opts = Array.from(sel.options).sort((a, b) => a.text.localeCompare(b.text, 'pt', {sensitivity:'base'}));
+        opts.forEach(o => sel.appendChild(o));
+    }
+
+    function updateCounts() {
+        document.getElementById('count-avail').textContent  = listAvail.options.length;
+        document.getElementById('count-chosen').textContent = listChosen.options.length;
+    }
+
+    function moveSelected(from, to) {
+        Array.from(from.selectedOptions).forEach(opt => {
+            from.removeChild(opt);
+            opt.selected = false;
+            to.appendChild(opt);
+        });
+        sortList(to);
+        updateCounts();
+        syncHidden();
+    }
+
+    function moveAll(from, to) {
+        Array.from(from.options).forEach(opt => {
+            from.removeChild(opt);
+            opt.selected = false;
+            to.appendChild(opt);
+        });
+        sortList(to);
+        updateCounts();
+        syncHidden();
+    }
+
+    function syncHidden() {
+        const chosenVals = new Set(Array.from(listChosen.options).map(o => o.value));
+        Array.from(hiddenSelect.options).forEach(opt => {
+            opt.selected = chosenVals.has(opt.value);
+        });
+    }
+
+    /* ── Filter ── */
+    function applyFilter(input, list) {
+        const q = input.value.toLowerCase();
+        Array.from(list.options).forEach(opt => {
+            opt.style.display = opt.text.toLowerCase().includes(q) ? '' : 'none';
+        });
+    }
+
+    filterAvail.addEventListener('input',  () => applyFilter(filterAvail,  listAvail));
+    filterChosen.addEventListener('input', () => applyFilter(filterChosen, listChosen));
+
+    /* ── Button events ── */
+    document.getElementById('btn-add').addEventListener('click',        () => moveSelected(listAvail, listChosen));
+    document.getElementById('btn-remove').addEventListener('click',     () => moveSelected(listChosen, listAvail));
+    document.getElementById('btn-add-all').addEventListener('click',    () => moveAll(listAvail, listChosen));
+    document.getElementById('btn-remove-all').addEventListener('click', () => moveAll(listChosen, listAvail));
+
+    /* ── Double-click to move ── */
+    listAvail.addEventListener('dblclick',  () => moveSelected(listAvail, listChosen));
+    listChosen.addEventListener('dblclick', () => moveSelected(listChosen, listAvail));
+
+    /* ── Before submit: select all chosen so they're sent ── */
+    document.getElementById('aluno-form').addEventListener('submit', function () {
+        Array.from(listChosen.options).forEach(opt => { opt.selected = true; });
+        syncHidden();
+    });
+
+    init();
+})();
+</script>
 {% endblock %}
