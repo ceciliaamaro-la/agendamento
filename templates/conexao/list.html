@@ -3,11 +3,27 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-warning"><i class="bi bi-plug"></i> Conexões Agenda (Bernoulli)</h2>
-        <a href="{% url 'cal:conexao_create' %}" class="btn btn-success btn-sm">
-            <i class="bi bi-plus-circle"></i> Nova Conexão
-        </a>
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h2 class="fw-bold text-warning mb-0"><i class="bi bi-plug"></i> Conexões Agenda (Bernoulli)</h2>
+        <div class="d-flex gap-2">
+            <button id="btn-robo" class="btn btn-primary btn-sm" onclick="executarRobo()">
+                <i class="bi bi-robot me-1"></i> Executar Robô
+            </button>
+            <a href="{% url 'cal:conexao_create' %}" class="btn btn-success btn-sm">
+                <i class="bi bi-plus-circle"></i> Nova Conexão
+            </a>
+        </div>
+    </div>
+
+    {# ── Painel de status do robô ── #}
+    <div id="robo-status" class="alert d-none mb-4" role="alert">
+        <div class="d-flex align-items-center gap-2">
+            <span id="robo-icon"></span>
+            <div>
+                <div id="robo-msg" class="fw-semibold"></div>
+                <div id="robo-detail" class="small text-muted mt-1"></div>
+            </div>
+        </div>
     </div>
 
     <div class="card shadow-sm">
@@ -59,4 +75,108 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const CSRF = '{{ csrf_token }}';
+    const URL_EXECUTAR = '{% url "cal:executar_robo" %}';
+    const URL_STATUS   = '{% url "cal:status_robo" %}';
+
+    const btn    = document.getElementById('btn-robo');
+    const panel  = document.getElementById('robo-status');
+    const icon   = document.getElementById('robo-icon');
+    const msg    = document.getElementById('robo-msg');
+    const detail = document.getElementById('robo-detail');
+
+    let pollInterval = null;
+
+    function mostrarStatus(dados) {
+        panel.classList.remove('d-none', 'alert-info', 'alert-warning', 'alert-success', 'alert-danger');
+
+        if (dados.rodando) {
+            panel.classList.add('alert-info');
+            icon.innerHTML = '<span class="spinner-border spinner-border-sm text-primary"></span>';
+            msg.textContent = 'Robô em execução… aguarde.';
+            detail.textContent = 'Acessando a plataforma Bernoulli e coletando eventos das turmas ativas.';
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Executando…';
+        } else if (dados.erro) {
+            panel.classList.add('alert-danger');
+            icon.innerHTML = '<i class="bi bi-x-circle-fill text-danger fs-5"></i>';
+            msg.textContent = 'Erro durante a execução.';
+            detail.textContent = dados.erro + (dados.ultima_execucao ? ' — ' + dados.ultima_execucao : '');
+            resetBtn();
+            pararPolling();
+        } else if (dados.ultima_execucao) {
+            panel.classList.add('alert-success');
+            icon.innerHTML = '<i class="bi bi-check-circle-fill text-success fs-5"></i>';
+            msg.textContent = 'Sincronização concluída!';
+            detail.textContent =
+                `${dados.conexoes_processadas} conexão(ões) processada(s) · `+
+                `${dados.salvos} evento(s) novo(s) salvo(s) · `+
+                `${dados.ignorados} ignorado(s) (já existiam) · `+
+                `Executado às ${dados.ultima_execucao}`;
+            resetBtn();
+            pararPolling();
+        }
+    }
+
+    function resetBtn() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-robot me-1"></i> Executar Robô';
+    }
+
+    function pararPolling() {
+        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+    }
+
+    function iniciarPolling() {
+        pararPolling();
+        pollInterval = setInterval(function () {
+            fetch(URL_STATUS)
+                .then(r => r.json())
+                .then(d => { mostrarStatus(d); })
+                .catch(() => {});
+        }, 3000);
+    }
+
+    window.executarRobo = function () {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Iniciando…';
+
+        fetch(URL_EXECUTAR, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/json' },
+        })
+        .then(r => r.json())
+        .then(function (d) {
+            if (!d.ok) {
+                panel.classList.remove('d-none', 'alert-info', 'alert-success', 'alert-danger');
+                panel.classList.add('alert-warning');
+                icon.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>';
+                msg.textContent = d.mensagem;
+                detail.textContent = '';
+                resetBtn();
+                return;
+            }
+            mostrarStatus({ rodando: true });
+            iniciarPolling();
+        })
+        .catch(function () {
+            resetBtn();
+        });
+    };
+
+    /* Verificar se já está rodando ao entrar na página */
+    fetch(URL_STATUS)
+        .then(r => r.json())
+        .then(function (d) {
+            if (d.rodando) { mostrarStatus(d); iniciarPolling(); }
+            else if (d.ultima_execucao) { mostrarStatus(d); }
+        })
+        .catch(() => {});
+})();
+</script>
 {% endblock %}

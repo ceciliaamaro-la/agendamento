@@ -7,6 +7,7 @@ from .views import views_turma
 from .views import views_conexao
 from .views import views_agenda
 from .views import views_whats
+from .views import views_robo
 
 app_name = 'cal'
 
@@ -66,4 +67,8 @@ urlpatterns = [
     # ─── Tarefas ───────────────────────────────────────────────────────────────
     path('tarefas/', views_tarefas.listar_tarefas, name='listar_tarefas'),
     path('tarefa/concluir/', views_tarefas.marcar_concluida, name='marcar_concluida'),
+
+    # ─── Robô ──────────────────────────────────────────────────────────────────
+    path('robo/executar/', views_robo.executar_robo, name='executar_robo'),
+    path('robo/status/', views_robo.status_robo, name='status_robo'),
 ]

@@ -47,3 +47,26 @@ def sincronizar_agenda():
 
         logger.error("❌ ERRO NA SINCRONIZAÇÃO DA AGENDA")
         traceback.print_exc()
+
+
+def sincronizar_agenda_com_resultado():
+    """Igual a sincronizar_agenda(), mas retorna dict com totais para o painel."""
+    logger.info("🚀 Iniciando sincronização (com resultado)")
+    total = {'salvos': 0, 'ignorados': 0, 'conexoes': 0}
+    try:
+        conexoes = ConexaoAgenda.objects.filter(ativo=True)
+        logger.info(f"🔎 Conexões ativas: {conexoes.count()}")
+        for conexao in conexoes:
+            logger.info(f"🏫 Processando turma: {conexao.turma}")
+            eventos = extrair_eventos(conexao.login, conexao.senha)
+            logger.info(f"📅 Eventos encontrados: {len(eventos)}")
+            resultado = salvar_eventos(eventos, turma=conexao.turma)
+            total['salvos']    += resultado['salvos']
+            total['ignorados'] += resultado['ignorados']
+            total['conexoes']  += 1
+            logger.info(f"💾 Salvos: {resultado['salvos']} | Ignorados: {resultado['ignorados']}")
+    except Exception as e:
+        logger.error("❌ ERRO NA SINCRONIZAÇÃO DA AGENDA")
+        traceback.print_exc()
+        raise
+    return total
