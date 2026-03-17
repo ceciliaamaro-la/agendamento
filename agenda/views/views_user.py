@@ -9,6 +9,12 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth import update_session_auth_hash
 
 
+def bemvindo(request):
+    if request.user.is_authenticated:
+        return redirect('cal:home')
+    return render(request, 'bemvindo.html')
+
+
 @login_required
 def perfil_usuario(request):
     if request.method == 'POST':
