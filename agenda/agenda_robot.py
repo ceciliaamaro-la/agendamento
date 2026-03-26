@@ -1,4 +1,4 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 from datetime import datetime, timedelta
 import logging
 import os
@@ -29,10 +29,11 @@ def fechar_tutorial(page):
         btn_fechar.click()
 
         modal.wait_for(state="hidden", timeout=4000)
-        logger.info("Modal de tutorial fechado")  # ALTERADO: removido 🚪
+        logger.info("Modal de tutorial fechado")
 
-    except Exception:
-        pass  # Modal não apareceu — segue normalmente
+    except PlaywrightTimeoutError:
+        # Modal not present — nothing to close.
+        pass
 
 
 # -------------------------------

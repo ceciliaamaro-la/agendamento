@@ -186,3 +186,54 @@ class UsuarioFormPasswordTest(TestCase):
         user = User.objects.get(username="pairesponsavel")
         self.assertTrue(user.has_usable_password())
         self.assertTrue(user.check_password("Senha@456"))
+
+
+# ---------------------------------------------------------------------------
+# fechar_tutorial — must swallow only PlaywrightTimeoutError, not all errors
+# ---------------------------------------------------------------------------
+
+class FecharTutorialTest(TestCase):
+    """
+    fechar_tutorial() must silently skip when the modal is absent (TimeoutError),
+    but must not suppress unrelated Playwright errors.
+    """
+
+    def _import_robot(self):
+        """Import agenda_robot with playwright stubbed out."""
+        import importlib
+        with patch.dict(sys.modules, _playwright_modules):
+            import agenda.agenda_robot as mod
+            importlib.reload(mod)
+            return mod
+
+    def test_timeout_is_silently_ignored(self):
+        """A PlaywrightTimeoutError from wait_for must not propagate."""
+        mod = self._import_robot()
+
+        # Inject the real PlaywrightTimeoutError class so the except clause matches.
+        real_timeout = type("TimeoutError", (Exception,), {})
+        mod.PlaywrightTimeoutError = real_timeout
+
+        page = MagicMock()
+        modal = MagicMock()
+        page.locator.return_value = modal
+        modal.wait_for.side_effect = real_timeout("timed out")
+
+        # Must not raise.
+        mod.fechar_tutorial(page)
+
+    def test_non_timeout_exception_propagates(self):
+        """Errors other than TimeoutError must not be swallowed."""
+        mod = self._import_robot()
+
+        real_timeout = type("TimeoutError", (Exception,), {})
+        mod.PlaywrightTimeoutError = real_timeout
+
+        page = MagicMock()
+        modal = MagicMock()
+        page.locator.return_value = modal
+        # Simulate an unexpected error (e.g. browser crash), not a timeout.
+        modal.wait_for.side_effect = RuntimeError("browser disconnected")
+
+        with self.assertRaises(RuntimeError):
+            mod.fechar_tutorial(page)
