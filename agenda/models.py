@@ -108,7 +108,7 @@ class AgendaEvento(models.Model):
 
     enviado_whatsapp = models.BooleanField(default=False)
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         indexes = [
