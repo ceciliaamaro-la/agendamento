@@ -1,28 +1,26 @@
-import logging
-import traceback
-
 from agenda.models import AgendaEvento
 from agenda.utils.hash_evento import gerar_hash
-
-logger = logging.getLogger(__name__)
 
 
 def salvar_eventos(eventos, turma=None):
 
-    salvos = 0
+    objetos = []
     ignorados = 0
+
+    hashes_existentes = set(
+        AgendaEvento.objects.values_list("hash", flat=True)
+    )
 
     for evento in eventos:
 
-        try:
+        hash_evento = gerar_hash(evento)
 
-            hash_evento = gerar_hash(evento)
+        if hash_evento in hashes_existentes:
+            ignorados += 1
+            continue
 
-            if AgendaEvento.objects.filter(hash=hash_evento).exists():
-                ignorados += 1
-                continue
-
-            AgendaEvento.objects.create(
+        objetos.append(
+            AgendaEvento(
                 turma=turma,
                 data=evento["data"],
                 dia=evento["dia"],
@@ -32,13 +30,11 @@ def salvar_eventos(eventos, turma=None):
                 descricao=evento["descricao"],
                 hash=hash_evento,
             )
+        )
 
-            salvos += 1
+    AgendaEvento.objects.bulk_create(objetos, ignore_conflicts=True)
 
-            logger.info(f"💾 Evento salvo: {evento['titulo']}")
-
-        except Exception as e:
-            logger.error(f"❌ Erro ao salvar evento '{evento.get('titulo', '?')}': {e}")
-            traceback.print_exc()
-
-    return {"salvos": salvos, "ignorados": ignorados}
+    return {
+        "salvos": len(objetos),
+        "ignorados": ignorados
+    }

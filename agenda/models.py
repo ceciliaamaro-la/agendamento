@@ -95,33 +95,26 @@ class ConexaoAgenda(models.Model):
 
 class AgendaEvento(models.Model):
 
-    turma = models.ForeignKey(
-        Turma,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
-    )
+    turma = models.ForeignKey("Turma", on_delete=models.CASCADE, null=True)
 
     data = models.DateField()
-
-    dia = models.CharField(max_length=5)
-
+    dia = models.CharField(max_length=20, blank=True)
     titulo = models.CharField(max_length=255)
+    tipo = models.CharField(max_length=100, blank=True)
+    datas = models.CharField(max_length=255, blank=True)
+    descricao = models.TextField(blank=True)
 
-    tipo = models.CharField(max_length=50)
-
-    datas = models.CharField(max_length=100)
-
-    descricao = models.TextField()
-
-    hash = models.CharField(max_length=64, unique=True)
+    hash = models.CharField(max_length=64, unique=True)  # 🔥 ESSENCIAL
 
     enviado_whatsapp = models.BooleanField(default=False)
 
-    criado_em = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"{self.data} - {self.titulo}"
+    class Meta:
+        indexes = [
+            models.Index(fields=["data"]),
+            models.Index(fields=["turma"]),
+        ]
 
 
 class TarefaCompleta(models.Model):
