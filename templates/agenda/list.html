@@ -10,119 +10,182 @@
     </a>
   </div>
 
-  <div class="card shadow-sm">
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead class="table-light">
-          <tr>
-            <th style="min-width:160px">Início</th>
-            <th style="min-width:160px">Término</th>
-            <th>Título / Descrição</th>
-            <th>Tipo</th>
-            <th>Turma</th>
-            <th class="text-center">Anexo</th>
-            <th class="text-center">WhatsApp</th>
-            <th class="text-center">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for agenda in agendas %}
-          <tr>
-            <!-- Início -->
-            <td>
-              {% if agenda.inicio %}
-                <span class="badge bg-secondary">{{ agenda.inicio|date:"d/m/Y" }}</span>
-                <small class="text-muted d-block">{{ agenda.inicio|date:"H:i" }}</small>
-              {% elif agenda.data %}
-                <span class="badge bg-secondary">{{ agenda.data|date:"d/m/Y" }}</span>
-              {% else %}
-                <span class="text-muted">—</span>
-              {% endif %}
-            </td>
+  <form method="post" action="{% url 'cal:agenda_delete_bulk' %}" id="form-bulk">
+    {% csrf_token %}
 
-            <!-- Término -->
-            <td>
-              {% if agenda.termino %}
-                <span class="badge bg-light text-dark border">{{ agenda.termino|date:"d/m/Y" }}</span>
-                <small class="text-muted d-block">{{ agenda.termino|date:"H:i" }}</small>
-              {% else %}
-                <span class="text-muted">—</span>
-              {% endif %}
-            </td>
-
-            <!-- Título + descrição expansível -->
-            <td>
-              <strong>{{ agenda.titulo }}</strong>
-              {% if agenda.descricao %}
-              <br>
-              <a class="small text-muted text-decoration-none"
-                 data-bs-toggle="collapse"
-                 href="#desc-{{ agenda.pk }}"
-                 role="button">
-                <i class="bi bi-chevron-down"></i> ver descrição
-              </a>
-              <div class="collapse mt-1" id="desc-{{ agenda.pk }}">
-                <div class="card card-body py-2 px-3 small text-secondary">
-                  {{ agenda.descricao }}
-                </div>
-              </div>
-              {% endif %}
-            </td>
-
-            <!-- Tipo -->
-            <td><span class="badge bg-info text-dark">{{ agenda.tipo }}</span></td>
-
-            <!-- Turma -->
-            <td>{{ agenda.turma }}</td>
-
-            <!-- Anexo -->
-            <td class="text-center">
-              {% if agenda.tem_anexo %}
-                {% if agenda.url_anexo %}
-                  <a href="{{ agenda.url_anexo }}" target="_blank" rel="noopener noreferrer"
-                     class="badge bg-warning text-dark text-decoration-none" title="Baixar anexo">
-                    <i class="bi bi-paperclip"></i> Baixar
-                  </a>
-                {% else %}
-                  <span class="badge bg-warning text-dark" title="Possui arquivo para download">
-                    <i class="bi bi-paperclip"></i> Sim
-                  </span>
-                {% endif %}
-              {% else %}
-                <span class="text-muted small">—</span>
-              {% endif %}
-            </td>
-
-            <!-- WhatsApp -->
-            <td class="text-center">
-              {% if agenda.enviado_whatsapp %}
-                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Enviado</span>
-              {% else %}
-                <span class="badge bg-light text-muted">Pendente</span>
-              {% endif %}
-            </td>
-
-            <!-- Ações -->
-            <td class="text-center text-nowrap">
-              <a href="{% url 'cal:agenda_update' agenda.pk %}" class="btn btn-sm btn-warning me-1">
-                <i class="bi bi-pencil"></i>
-              </a>
-              <a href="{% url 'cal:agenda_delete' agenda.pk %}" class="btn btn-sm btn-danger">
-                <i class="bi bi-trash"></i>
-              </a>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="8" class="text-center text-muted py-5">
-              <i class="bi bi-calendar-x fs-3 d-block mb-2"></i>
-              Nenhum evento encontrado.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <!-- Barra de ações em lote (aparece ao selecionar) -->
+    <div id="bulk-bar" class="d-none mb-3 d-flex align-items-center gap-3">
+      <span id="bulk-count" class="text-muted small fw-semibold"></span>
+      <button type="submit" class="btn btn-danger btn-sm"
+              onclick="return confirm('Excluir os eventos selecionados?')">
+        <i class="bi bi-trash"></i> Excluir selecionados
+      </button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-deselect">
+        Desmarcar todos
+      </button>
     </div>
-  </div>
+
+    <div class="card shadow-sm">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width:36px">
+                <input type="checkbox" id="check-all" class="form-check-input"
+                       title="Selecionar todos">
+              </th>
+              <th style="min-width:160px">Início</th>
+              <th style="min-width:160px">Término</th>
+              <th>Título / Descrição</th>
+              <th>Tipo</th>
+              <th>Turma</th>
+              <th class="text-center">Anexo</th>
+              <th class="text-center">WhatsApp</th>
+              <th class="text-center">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for agenda in agendas %}
+            <tr>
+              <!-- Checkbox -->
+              <td>
+                <input type="checkbox" name="ids" value="{{ agenda.pk }}"
+                       class="form-check-input row-check">
+              </td>
+
+              <!-- Início -->
+              <td>
+                {% if agenda.inicio %}
+                  <span class="badge bg-secondary">{{ agenda.inicio|date:"d/m/Y" }}</span>
+                  <small class="text-muted d-block">{{ agenda.inicio|date:"H:i" }}</small>
+                {% elif agenda.data %}
+                  <span class="badge bg-secondary">{{ agenda.data|date:"d/m/Y" }}</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+
+              <!-- Término -->
+              <td>
+                {% if agenda.termino %}
+                  <span class="badge bg-light text-dark border">{{ agenda.termino|date:"d/m/Y" }}</span>
+                  <small class="text-muted d-block">{{ agenda.termino|date:"H:i" }}</small>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+
+              <!-- Título + descrição expansível -->
+              <td>
+                <strong>{{ agenda.titulo }}</strong>
+                {% if agenda.descricao %}
+                <br>
+                <a class="small text-muted text-decoration-none"
+                   data-bs-toggle="collapse"
+                   href="#desc-{{ agenda.pk }}"
+                   role="button">
+                  <i class="bi bi-chevron-down"></i> ver descrição
+                </a>
+                <div class="collapse mt-1" id="desc-{{ agenda.pk }}">
+                  <div class="card card-body py-2 px-3 small text-secondary">
+                    {{ agenda.descricao }}
+                  </div>
+                </div>
+                {% endif %}
+              </td>
+
+              <!-- Tipo -->
+              <td><span class="badge bg-info text-dark">{{ agenda.tipo }}</span></td>
+
+              <!-- Turma -->
+              <td>{{ agenda.turma }}</td>
+
+              <!-- Anexo -->
+              <td class="text-center">
+                {% if agenda.tem_anexo %}
+                  {% if agenda.url_anexo %}
+                    <a href="{{ agenda.url_anexo }}" target="_blank" rel="noopener noreferrer"
+                       class="badge bg-warning text-dark text-decoration-none" title="Baixar anexo">
+                      <i class="bi bi-paperclip"></i> Baixar
+                    </a>
+                  {% else %}
+                    <span class="badge bg-warning text-dark" title="Possui arquivo para download">
+                      <i class="bi bi-paperclip"></i> Sim
+                    </span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted small">—</span>
+                {% endif %}
+              </td>
+
+              <!-- WhatsApp -->
+              <td class="text-center">
+                {% if agenda.enviado_whatsapp %}
+                  <span class="badge bg-success"><i class="bi bi-check-circle"></i> Enviado</span>
+                {% else %}
+                  <span class="badge bg-light text-muted">Pendente</span>
+                {% endif %}
+              </td>
+
+              <!-- Ações -->
+              <td class="text-center text-nowrap">
+                <a href="{% url 'cal:agenda_update' agenda.pk %}" class="btn btn-sm btn-warning me-1">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <a href="{% url 'cal:agenda_delete' agenda.pk %}" class="btn btn-sm btn-danger">
+                  <i class="bi bi-trash"></i>
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="9" class="text-center text-muted py-5">
+                <i class="bi bi-calendar-x fs-3 d-block mb-2"></i>
+                Nenhum evento encontrado.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </form>
 </div>
+
+<script>
+(function () {
+  const checkAll    = document.getElementById('check-all');
+  const bulkBar     = document.getElementById('bulk-bar');
+  const bulkCount   = document.getElementById('bulk-count');
+  const btnDeselect = document.getElementById('btn-deselect');
+
+  function updateBar() {
+    const checked = document.querySelectorAll('.row-check:checked');
+    if (checked.length > 0) {
+      bulkBar.classList.remove('d-none');
+      bulkCount.textContent = checked.length + ' selecionado(s)';
+    } else {
+      bulkBar.classList.add('d-none');
+    }
+    const total = document.querySelectorAll('.row-check').length;
+    checkAll.indeterminate = checked.length > 0 && checked.length < total;
+    checkAll.checked = checked.length === total && total > 0;
+  }
+
+  checkAll.addEventListener('change', function () {
+    document.querySelectorAll('.row-check').forEach(cb => cb.checked = this.checked);
+    updateBar();
+  });
+
+  document.querySelectorAll('.row-check').forEach(cb => {
+    cb.addEventListener('change', updateBar);
+  });
+
+  btnDeselect.addEventListener('click', function () {
+    document.querySelectorAll('.row-check').forEach(cb => cb.checked = false);
+    checkAll.checked = false;
+    updateBar();
+  });
+})();
+</script>
 {% endblock %}

@@ -56,6 +56,7 @@ urlpatterns = [
     # ─── Eventos da Agenda ─────────────────────────────────────────────────────
     path('eventos/', views_agenda.agenda_list, name='agenda_list'),
     path('eventos/novo/', views_agenda.agenda_create, name='agenda_create'),
+    path('eventos/excluir-multiplos/', views_agenda.agenda_delete_bulk, name='agenda_delete_bulk'),
     path('eventos/<int:pk>/editar/', views_agenda.agenda_update, name='agenda_update'),
     path('eventos/<int:pk>/excluir/', views_agenda.agenda_delete, name='agenda_delete'),
 

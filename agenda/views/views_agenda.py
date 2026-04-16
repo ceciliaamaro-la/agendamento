@@ -46,3 +46,15 @@ def agenda_delete(request, pk):
         messages.success(request, 'Evento excluído com sucesso!')
         return redirect('cal:agenda_list')
     return render(request, 'agenda/confirm_delete.html', {'agenda': agenda})
+
+
+@login_required
+def agenda_delete_bulk(request):
+    if request.method == 'POST':
+        ids = request.POST.getlist('ids')
+        if ids:
+            deleted, _ = AgendaEvento.objects.filter(pk__in=ids).delete()
+            messages.success(request, f'{deleted} evento(s) excluído(s).')
+        else:
+            messages.warning(request, 'Nenhum evento selecionado.')
+    return redirect('cal:agenda_list')
