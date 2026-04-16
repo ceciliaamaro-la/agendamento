@@ -131,7 +131,7 @@ def extrair_eventos(login, senha):
 
     with sync_playwright() as p:
 
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=False)
         context = browser.new_context(user_agent=USER_AGENT)
 
         if os.path.exists(COOKIES_PATH):
@@ -169,7 +169,10 @@ def extrair_eventos(login, senha):
                 except PlaywrightTimeoutError:
                     pass
 
-                page.wait_for_url("**/minhaarea**", timeout=20000)
+                # page.wait_for_url("**/minhaarea**", timeout=20000)
+                print("needs_login")
+                page.get_by_role("button", name="Minha Área").click()
+                page.get_by_role("button", name="Agenda").click()
 
                 fechar_boasvindas(page)
                 fechar_tutorial(page)
@@ -178,16 +181,19 @@ def extrair_eventos(login, senha):
                     json.dump(context.cookies(), f)
                 logger.info("Cookies salvos")
             else:
+                print("needs_login else")
                 fechar_boasvindas(page)
                 fechar_tutorial(page)
 
             # Wait for the SPA to finish loading the auth token into localStorage.
             page.wait_for_timeout(3000)
-
+            page.get_by_role("button", name="Minha Área").click()
+            page.get_by_role("button", name="Agenda").click()
             token = extrair_token(page)
 
             data_inicio, data_fim = janela_datas()
             url_api = (
+                
                 f"https://api.bernoulli.com.br/api/comunicacao/agenda/listar"
                 f"?dataInicio={data_inicio}&dataTermino={data_fim}"
             )
