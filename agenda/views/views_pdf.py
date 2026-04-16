@@ -1,11 +1,15 @@
 import io
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+
+BRASILIA = ZoneInfo("America/Sao_Paulo")
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
@@ -166,8 +170,10 @@ def _tabela_eventos(eventos, concluidos_ids: set, largura: float):
 
         row_colors.append(("BACKGROUND", (0, i), (-1, i), cor_fundo))
 
-        data_str = evento.data.strftime("%d/%m/%Y")
-        if evento.data == date.today():
+        # Use inicio when available (timezone-aware); fall back to legacy data field.
+        data_ref = evento.inicio.astimezone(BRASILIA).date() if evento.inicio else evento.data
+        data_str = data_ref.strftime("%d/%m/%Y") if data_ref else "—"
+        if data_ref == date.today():
             data_str += "\n(Hoje)"
 
         cor_tipo = _cor_tipo(evento.tipo)
@@ -258,13 +264,26 @@ def gerar_pdf_tarefas(request):
         return HttpResponse("Nenhum aluno vinculado.", status=404)
 
     hoje = date.today()
-    data_inicio = hoje - timedelta(days=1)
-    data_fim    = hoje + timedelta(days=7)
+    primeiro_mes_atual    = hoje.replace(day=1)
+    primeiro_mes_anterior = (primeiro_mes_atual - timedelta(days=1)).replace(day=1)
+    ultimo_mes_atual      = (primeiro_mes_atual + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    data_inicio = primeiro_mes_anterior
+    data_fim    = ultimo_mes_atual + timedelta(days=10)
+
+    # inicio is stored as UTC-aware; convert window boundaries accordingly.
+    inicio_utc = datetime(data_inicio.year, data_inicio.month, data_inicio.day,
+                          tzinfo=BRASILIA)
+    fim_utc    = datetime(data_fim.year, data_fim.month, data_fim.day,
+                          23, 59, 59, tzinfo=BRASILIA)
 
     eventos = (
         AgendaEvento.objects
-        .filter(turma=aluno.turma, data__gte=data_inicio, data__lte=data_fim)
-        .order_by("data")
+        .filter(turma=aluno.turma)
+        .filter(
+            Q(inicio__gte=inicio_utc, inicio__lte=fim_utc) |
+            Q(inicio__isnull=True, data__gte=data_inicio, data__lte=data_fim)
+        )
+        .order_by("inicio", "data")
     )
 
     concluidos_ids = set(
