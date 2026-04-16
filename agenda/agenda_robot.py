@@ -79,20 +79,35 @@ def extrair_token(page):
     The Bernoulli SPA stores the token under several possible keys. Returns
     the token string, or None if not found.
     """
+    # Dump all localStorage keys and the first 80 chars of each value so we can
+    # identify the correct key name. Remove this block once the key is known.
+    dump = page.evaluate("""
+        () => {
+            const result = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                const v = localStorage.getItem(k) || '';
+                result[k] = v.substring(0, 80);
+            }
+            return result;
+        }
+    """)
+    logger.info(f"[DIAGNÓSTICO] localStorage keys: {list(dump.keys())}")
+    for k, v in dump.items():
+        logger.info(f"  {k}: {v}")
+
     token = page.evaluate("""
         () => {
-            const candidates = Object.keys(localStorage).filter(k =>
-                k.toLowerCase().includes('token') ||
-                k.toLowerCase().includes('auth') ||
-                k.toLowerCase().includes('jwt')
-            );
-            for (const key of candidates) {
-                const val = localStorage.getItem(key);
-                if (val && val.startsWith('eyJ')) return val;
+            // Scan every key — accept any value that is a raw JWT.
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                const val = localStorage.getItem(k) || '';
+                if (val.startsWith('eyJ')) return val;
                 try {
                     const obj = JSON.parse(val);
-                    const t = obj.token || obj.access_token || obj.accessToken;
-                    if (t && t.startsWith('eyJ')) return t;
+                    for (const field of ['token', 'access_token', 'accessToken', 'bearerToken']) {
+                        if (obj[field] && obj[field].startsWith('eyJ')) return obj[field];
+                    }
                 } catch (_) {}
             }
             return null;
@@ -185,10 +200,11 @@ def extrair_eventos(login, senha):
                 fechar_boasvindas(page)
                 fechar_tutorial(page)
 
-            # Wait for the SPA to finish loading the auth token into localStorage.
-            page.wait_for_timeout(3000)
+            # Navigate to Agenda so the SPA loads the auth token into localStorage.
             page.get_by_role("button", name="Minha Área").click()
             page.get_by_role("button", name="Agenda").click()
+            # Give the SPA time to complete its auth token initialization.
+            page.wait_for_timeout(3000)
             token = extrair_token(page)
 
             data_inicio, data_fim = janela_datas()
