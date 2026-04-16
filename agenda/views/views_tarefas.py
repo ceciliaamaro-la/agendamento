@@ -6,6 +6,8 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from django.db.models import Q
 
 from ..models import Aluno, AgendaEvento, TarefaCompleta
 
@@ -15,10 +17,10 @@ logger = logging.getLogger(__name__)
 @login_required
 def listar_tarefas(request):
     """
-    Detecta automaticamente os alunos vinculados ao usuário logado.
-    Se tiver mais de um aluno, permite selecionar via ?aluno_id=.
-    Filtra eventos: 1 dia anterior + hoje + 7 dias à frente.
-    Separa em pendentes e concluídas.
+    Shows tasks for the logged-in user's students.
+
+    Window: yesterday through end of next month, covering both legacy
+    records (filtered by `data`) and new records (filtered by `inicio`).
     """
     alunos_do_usuario = Aluno.objects.filter(
         usuarios=request.user
@@ -27,23 +29,29 @@ def listar_tarefas(request):
     if not alunos_do_usuario.exists():
         return render(request, 'tarefas/sem_aluno.html', {})
 
-    # Seleciona o aluno: primeiro da lista ou o que o usuário escolheu
     aluno_id = request.GET.get('aluno_id')
     if aluno_id:
         aluno = get_object_or_404(alunos_do_usuario, pk=aluno_id)
     else:
         aluno = alunos_do_usuario.first()
 
-    # Janela de datas: ontem até daqui 7 dias
+    # Window: yesterday → end of next month
     hoje = date.today()
     data_inicio = hoje - timedelta(days=1)
-    data_fim = hoje + timedelta(days=7)
+    primeiro_proximo = (hoje.replace(day=1) + timedelta(days=32)).replace(day=1)
+    data_fim = (primeiro_proximo + timedelta(days=32)).replace(day=1) - timedelta(days=1)
 
+    # Include events that match the window via either field.
+    # Records from the new robot have inicio set; legacy records use data.
     eventos = (
         AgendaEvento.objects
-        .filter(turma=aluno.turma, data__gte=data_inicio, data__lte=data_fim)
+        .filter(turma=aluno.turma)
+        .filter(
+            Q(inicio__date__gte=data_inicio, inicio__date__lte=data_fim) |
+            Q(inicio__isnull=True, data__gte=data_inicio, data__lte=data_fim)
+        )
         .select_related("turma")
-        .order_by("data")
+        .order_by("inicio", "data")
     )
 
     concluidos_ids = set(
@@ -77,9 +85,9 @@ def listar_tarefas(request):
 @login_required
 def marcar_concluida(request):
     """
-    Endpoint AJAX para marcar/desmarcar uma tarefa como concluída.
+    AJAX endpoint to toggle a task as done/undone.
     Payload JSON: { "evento_id": int, "aluno_id": int }
-    Resposta JSON: { "status": "ok", "concluida": bool }
+    Response JSON: { "status": "ok", "concluida": bool }
     """
     try:
         data = json.loads(request.body)
@@ -89,7 +97,6 @@ def marcar_concluida(request):
         logger.warning(f"Payload inválido em marcar_concluida: {e}")
         return JsonResponse({"status": "erro", "mensagem": "Dados inválidos."}, status=400)
 
-    # Verifica que o aluno pertence ao usuário logado
     aluno = get_object_or_404(Aluno, pk=aluno_id, usuarios=request.user)
     evento = get_object_or_404(AgendaEvento, pk=evento_id)
 
