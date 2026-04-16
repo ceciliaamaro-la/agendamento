@@ -145,6 +145,46 @@ def fechar_tutorial(page):
 
 
 # ---------------------------------------------------------------------------
+# Download URL capture
+# ---------------------------------------------------------------------------
+
+def _capturar_url_download(page, btn_locator):
+    """
+    Clicks the download button and intercepts the resulting network request
+    to extract the file URL without saving the file to disk.
+
+    The Bernoulli download button triggers a JS-driven request (no static href).
+    We use Playwright's expect_download() context manager to catch the download
+    event and read the URL from the response.
+
+    Returns the URL string, or "" if interception fails or times out.
+    """
+    try:
+        # expect_download() catches the browser's download event triggered by
+        # the button click, giving us access to the resolved URL.
+        with page.expect_download(timeout=10000) as download_info:
+            # The icon <i> is not clickable — find the parent <button>
+            clickable = btn_locator
+            tag = btn_locator.evaluate("el => el.tagName.toLowerCase()")
+            if tag != "button":
+                clickable = btn_locator.locator("xpath=ancestor::button[1]")
+                if clickable.count() == 0:
+                    clickable = btn_locator.locator("xpath=ancestor-or-self::*[@role='button'][1]")
+            clickable.click()
+
+        download = download_info.value
+        url = download.url
+        logger.info(f"URL de download capturada: {url}")
+        return url
+    except PlaywrightTimeoutError:
+        logger.warning("Timeout ao tentar capturar URL de download — sem anexo acessível")
+        return ""
+    except Exception as e:
+        logger.warning(f"Erro ao capturar URL de download: {e}")
+        return ""
+
+
+# ---------------------------------------------------------------------------
 # Main extraction function
 # ---------------------------------------------------------------------------
 
@@ -241,14 +281,18 @@ def extrair_eventos(login, senha):
                 termino_raw = colunas[3].inner_text().strip()
                 tipo = colunas[4].locator("span").first.inner_text().strip()
 
-                # Column 5 (Ações) — check for download icon
+                # Column 5 (Ações) — detect download button and capture URL
                 tem_anexo = False
+                url_anexo = ""
                 if len(colunas) >= 6:
-                    tem_anexo = (
-                        colunas[5].locator("i.ph-file-arrow-down").count() > 0
-                        or colunas[5].locator("[class*='file-arrow-down']").count() > 0
-                        or colunas[5].locator("button[title*='baixar'], button[title*='download'], a[href]").count() > 0
-                    )
+                    btn_download = colunas[5].locator(
+                        "button[tooltip*='Baixar'], button[tooltip*='baixar'], "
+                        "button[tooltip*='download'], button[tooltip*='Download'], "
+                        "i.ph-file-arrow-down, [class*='file-arrow-down']"
+                    ).first
+                    if btn_download.count() > 0:
+                        tem_anexo = True
+                        url_anexo = _capturar_url_download(page, btn_download)
 
                 inicio = formatar_data_bernoulli(inicio_raw)
                 termino = formatar_data_bernoulli(termino_raw)
@@ -258,6 +302,7 @@ def extrair_eventos(login, senha):
                     "inicio": inicio,
                     "termino": termino,
                     "tem_anexo": tem_anexo,
+                    "url_anexo": url_anexo,
                     # Core fields
                     "titulo": titulo,
                     "descricao": descricao,

@@ -28,6 +28,7 @@ def salvar_eventos(eventos, turma=None):
                 inicio=evento.get("inicio"),
                 termino=evento.get("termino"),
                 tem_anexo=evento.get("tem_anexo", False),
+                url_anexo=evento.get("url_anexo", ""),
                 # Legacy fields — populated when available for backward compat
                 data=evento.get("data"),
                 dia=evento.get("dia", ""),

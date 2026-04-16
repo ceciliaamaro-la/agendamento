@@ -170,9 +170,17 @@ body.dark-mode .titulo-concluido     { color: #9ca3af; }
                                 <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;">Amanhã</span>
                             {% endif %}
                             {% if evento.tem_anexo %}
-                                <span class="badge bg-warning text-dark ms-1" title="Possui arquivo para download" style="font-size:.65rem;">
-                                    <i class="bi bi-paperclip"></i>
-                                </span>
+                                {% if evento.url_anexo %}
+                                    <a href="{{ evento.url_anexo }}" target="_blank" rel="noopener noreferrer"
+                                       class="badge bg-warning text-dark ms-1 text-decoration-none"
+                                       title="Baixar anexo" style="font-size:.65rem;">
+                                        <i class="bi bi-paperclip"></i>
+                                    </a>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark ms-1" title="Possui arquivo para download" style="font-size:.65rem;">
+                                        <i class="bi bi-paperclip"></i>
+                                    </span>
+                                {% endif %}
                             {% endif %}
                         </span>
                     </div>

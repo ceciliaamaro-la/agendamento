@@ -114,6 +114,9 @@ class AgendaEvento(models.Model):
     # Indica se o evento possui arquivo para download
     tem_anexo = models.BooleanField(default=False)
 
+    # URL direta do anexo, capturada ao interceptar o clique no botão de download
+    url_anexo = models.URLField(max_length=2048, blank=True, default="")
+
     hash = models.CharField(max_length=64, unique=True)
 
     enviado_whatsapp = models.BooleanField(default=False)

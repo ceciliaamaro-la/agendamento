@@ -78,9 +78,16 @@
             <!-- Anexo -->
             <td class="text-center">
               {% if agenda.tem_anexo %}
-                <span class="badge bg-warning text-dark" title="Possui arquivo para download">
-                  <i class="bi bi-paperclip"></i> Sim
-                </span>
+                {% if agenda.url_anexo %}
+                  <a href="{{ agenda.url_anexo }}" target="_blank" rel="noopener noreferrer"
+                     class="badge bg-warning text-dark text-decoration-none" title="Baixar anexo">
+                    <i class="bi bi-paperclip"></i> Baixar
+                  </a>
+                {% else %}
+                  <span class="badge bg-warning text-dark" title="Possui arquivo para download">
+                    <i class="bi bi-paperclip"></i> Sim
+                  </span>
+                {% endif %}
               {% else %}
                 <span class="text-muted small">—</span>
               {% endif %}
