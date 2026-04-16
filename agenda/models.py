@@ -97,14 +97,24 @@ class AgendaEvento(models.Model):
 
     turma = models.ForeignKey("Turma", on_delete=models.CASCADE, null=True)
 
-    data = models.DateField()
+    # Campos legados (mantidos para compatibilidade com dados existentes)
+    data = models.DateField(null=True, blank=True)
     dia = models.CharField(max_length=20, blank=True)
-    titulo = models.CharField(max_length=255)
-    tipo = models.CharField(max_length=100, blank=True)
     datas = models.CharField(max_length=255, blank=True)
-    descricao = models.TextField(blank=True)
 
-    hash = models.CharField(max_length=64, unique=True)  # 🔥 ESSENCIAL
+    # Campos principais
+    titulo = models.CharField(max_length=255)
+    descricao = models.TextField(blank=True)
+    tipo = models.CharField(max_length=100, blank=True)
+
+    # Datas estruturadas extraídas da visualização Lista
+    inicio = models.DateTimeField(null=True, blank=True)
+    termino = models.DateTimeField(null=True, blank=True)
+
+    # Indica se o evento possui arquivo para download
+    tem_anexo = models.BooleanField(default=False)
+
+    hash = models.CharField(max_length=64, unique=True)
 
     enviado_whatsapp = models.BooleanField(default=False)
 
@@ -113,8 +123,15 @@ class AgendaEvento(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=["data"]),
+            models.Index(fields=["inicio"]),
             models.Index(fields=["turma"]),
         ]
+
+    def __str__(self):
+        dt = self.inicio or self.data
+        if dt:
+            return f"{self.titulo} — {dt.strftime('%d/%m/%Y') if hasattr(dt, 'strftime') else dt}"
+        return self.titulo
 
 
 class TarefaCompleta(models.Model):
