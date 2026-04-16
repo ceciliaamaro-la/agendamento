@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import re
+import threading
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from html.parser import HTMLParser
@@ -150,38 +151,52 @@ def fechar_tutorial(page):
 
 def _capturar_url_download(page, btn_locator):
     """
-    Clicks the download button and intercepts the resulting network request
-    to extract the file URL without saving the file to disk.
+    Clicks the download button and intercepts the outgoing network request to
+    sameubernoulli.blob.core.windows.net to extract the real file URL.
 
-    The Bernoulli download button triggers a JS-driven request (no static href).
-    We use Playwright's expect_download() context manager to catch the download
-    event and read the URL from the response.
+    The Bernoulli frontend fetches the file via JS (fetch/XHR), creates a
+    blob URL locally, and triggers the download — so expect_download() only
+    returns a blob: URL. Instead, we listen for the outgoing request to the
+    Azure Blob Storage host and capture it before the browser processes the
+    response.
 
     Returns the URL string, or "" if interception fails or times out.
     """
-    try:
-        # expect_download() catches the browser's download event triggered by
-        # the button click, giving us access to the resolved URL.
-        with page.expect_download(timeout=10000) as download_info:
-            # The icon <i> is not clickable — find the parent <button>
-            clickable = btn_locator
-            tag = btn_locator.evaluate("el => el.tagName.toLowerCase()")
-            if tag != "button":
-                clickable = btn_locator.locator("xpath=ancestor::button[1]")
-                if clickable.count() == 0:
-                    clickable = btn_locator.locator("xpath=ancestor-or-self::*[@role='button'][1]")
-            clickable.click()
+    AZURE_HOST = "sameubernoulli.blob.core.windows.net"
+    captured = []
+    event = threading.Event()
 
-        download = download_info.value
-        url = download.url
-        logger.info(f"URL de download capturada: {url}")
-        return url
-    except PlaywrightTimeoutError:
-        logger.warning("Timeout ao tentar capturar URL de download — sem anexo acessível")
+    def on_request(request):
+        if AZURE_HOST in request.url and not captured:
+            captured.append(request.url)
+            event.set()
+
+    page.on("request", on_request)
+    try:
+        # Resolve the clickable element — the icon <i> is not directly clickable
+        clickable = btn_locator
+        tag = btn_locator.evaluate("el => el.tagName.toLowerCase()")
+        if tag != "button":
+            clickable = btn_locator.locator("xpath=ancestor::button[1]")
+            if clickable.count() == 0:
+                clickable = btn_locator.locator("xpath=ancestor-or-self::*[@role='button'][1]")
+        clickable.click()
+
+        # Wait up to 8 s for the Azure request to fire
+        event.wait(timeout=8)
+
+        if captured:
+            url = captured[0]
+            logger.info(f"URL de download capturada: {url}")
+            return url
+
+        logger.warning("Nenhuma requisição ao Azure detectada após clique no botão de download")
         return ""
     except Exception as e:
         logger.warning(f"Erro ao capturar URL de download: {e}")
         return ""
+    finally:
+        page.remove_listener("request", on_request)
 
 
 # ---------------------------------------------------------------------------
@@ -281,14 +296,17 @@ def extrair_eventos(login, senha):
                 termino_raw = colunas[3].inner_text().strip()
                 tipo = colunas[4].locator("span").first.inner_text().strip()
 
-                # Column 5 (Ações) — detect download button and capture URL
+                # Column 5 (Ações) — detect download button and capture URL.
+                # HTML structure: <div tooltip="Baixar anexo"><button class="IButton ...">
+                # The tooltip attribute sits on the wrapper <div>, not the <button>.
                 tem_anexo = False
                 url_anexo = ""
                 if len(colunas) >= 6:
                     btn_download = colunas[5].locator(
-                        "button[tooltip*='Baixar'], button[tooltip*='baixar'], "
-                        "button[tooltip*='download'], button[tooltip*='Download'], "
-                        "i.ph-file-arrow-down, [class*='file-arrow-down']"
+                        "[tooltip='Baixar anexo'] button, "
+                        "[tooltip='Baixar Anexo'] button, "
+                        "[tooltip*='baixar'] button, "
+                        "[tooltip*='Baixar'] button"
                     ).first
                     if btn_download.count() > 0:
                         tem_anexo = True
