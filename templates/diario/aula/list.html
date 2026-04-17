@@ -69,7 +69,7 @@
                     {% with dias=aula.dias_para_entrega %}
                       {% if dias is not None %}
                         <small class="text-muted d-block">
-                          {% if dias < 0 %}Atrasado {{ dias|abs }} d{% elif dias == 0 %}Hoje{% else %}{{ dias }} d{% endif %}
+                          {% if dias == 0 %}Hoje{% elif dias > 0 %}{{ dias }} d{% else %}Atrasado{% endif %}
                         </small>
                       {% endif %}
                     {% endwith %}
