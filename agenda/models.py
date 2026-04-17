@@ -75,10 +75,9 @@ class Aluno(models.Model):
 
 class ConexaoAgenda(models.Model):
 
-    turma = models.ForeignKey(
+    turma = models.OneToOneField(
         Turma,
         on_delete=models.CASCADE,
-        unique=True
     )
 
     login = models.CharField(max_length=100)
