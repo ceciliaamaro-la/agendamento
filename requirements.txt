@@ -37,3 +37,16 @@ tzlocal==5.3.1
 urllib3==2.6.3
 vine==5.1.0
 wcwidth==0.6.0
+celery==5.6.3
+Django==5.2.12
+django-celery-beat==2.9.0
+djangorestframework==3.16.1
+pillow==12.1.1
+playwright==1.58.0
+python-crontab==3.3.0
+python-dateutil==2.9.0.post0
+python-dotenv==1.2.2
+redis==7.4.0
+reportlab==4.4.10
+requests==2.32.5
+tzlocal==5.3.1
