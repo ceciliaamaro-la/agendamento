@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}Diário de Chamada{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold text-primary"><i class="bi bi-clipboard2-check-fill"></i> Diário de Chamada</h2>
+    <a href="{% url 'cal:aula_create' %}" class="btn btn-success btn-sm">
+      <i class="bi bi-plus-circle"></i> Nova Aula
+    </a>
+  </div>
+
+  <!-- Filtro por turma -->
+  <form method="get" class="d-flex gap-2 mb-4 align-items-center">
+    <select name="turma" class="form-select form-select-sm" style="max-width:240px">
+      <option value="">Todas as turmas</option>
+      {% for t in turmas %}
+        <option value="{{ t.pk }}" {% if turma_filtro == t.pk|stringformat:"s" %}selected{% endif %}>
+          {{ t.escola }} — {{ t.nome_turma }}
+        </option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-outline-primary btn-sm">Filtrar</button>
+    {% if turma_filtro %}<a href="{% url 'cal:diario_list' %}" class="btn btn-outline-secondary btn-sm">Limpar</a>{% endif %}
+  </form>
+
+  {% if tem_aulas %}
+    {% for escola, turmas_dict in aulas_por_escola.items %}
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header bg-dark text-white fw-bold">
+        <i class="bi bi-building me-1"></i>{{ escola }}
+      </div>
+      <div class="card-body p-0">
+        {% for turma, aulas in turmas_dict.items %}
+        <div class="px-3 pt-3 pb-1">
+          <h6 class="fw-bold text-secondary"><i class="bi bi-people-fill me-1"></i>{{ turma }}</h6>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-3">
+            <thead class="table-light">
+              <tr>
+                <th>Data</th>
+                <th>Matéria</th>
+                <th>Professor</th>
+                <th class="text-center">Presentes</th>
+                <th class="text-center">Faltas</th>
+                <th class="text-center" style="width:120px">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for aula in aulas %}
+              <tr>
+                <td>
+                  {% if aula.data_aula %}
+                    <span class="badge bg-secondary">{{ aula.data_aula|date:"d/m/Y" }}</span>
+                  {% else %}—{% endif %}
+                </td>
+                <td><span class="badge bg-info text-dark">{{ aula.materia }}</span></td>
+                <td>{{ aula.professor }}</td>
+                <td class="text-center">
+                  <span class="badge bg-success">{{ aula.total_alunos|add:"-"|add:aula.total_faltas|default:aula.total_alunos }}</span>
+                </td>
+                <td class="text-center">
+                  {% if aula.total_faltas > 0 %}
+                    <span class="badge bg-danger">{{ aula.total_faltas }}</span>
+                  {% else %}
+                    <span class="badge bg-light text-muted">0</span>
+                  {% endif %}
+                </td>
+                <td class="text-center text-nowrap">
+                  <a href="{% url 'cal:diario_chamada' aula.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Editar chamada">
+                    <i class="bi bi-person-check"></i>
+                  </a>
+                  <a href="{% url 'cal:diario_detail' aula.pk %}" class="btn btn-sm btn-outline-secondary" title="Ver detalhe">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-clipboard2-x fs-1 d-block mb-2"></i>Nenhuma aula registrada.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

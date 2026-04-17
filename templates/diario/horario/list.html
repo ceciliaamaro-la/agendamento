@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Horários{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold text-primary"><i class="bi bi-clock-fill"></i> Horários</h2>
+    <a href="{% url 'cal:horario_create' %}" class="btn btn-success btn-sm">
+      <i class="bi bi-plus-circle"></i> Novo Horário
+    </a>
+  </div>
+
+  <!-- Filtro por turma -->
+  <form method="get" class="d-flex gap-2 mb-4 align-items-center">
+    <select name="turma" class="form-select form-select-sm" style="max-width:220px">
+      <option value="">Todas as turmas</option>
+      {% for t in turmas %}
+        <option value="{{ t.pk }}" {% if turma_filtro == t.pk|stringformat:"s" %}selected{% endif %}>
+          {{ t.escola }} — {{ t.nome_turma }}
+        </option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-outline-primary btn-sm">Filtrar</button>
+    {% if turma_filtro %}<a href="{% url 'cal:horario_list' %}" class="btn btn-outline-secondary btn-sm">Limpar</a>{% endif %}
+  </form>
+
+  {% if tem_horarios %}
+    {% for escola, turmas_dict in agrupado.items %}
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header bg-dark text-white fw-bold">
+        <i class="bi bi-building me-1"></i>{{ escola }}
+      </div>
+      <div class="card-body p-0">
+        {% for turma, dias_dict in turmas_dict.items %}
+        <div class="px-3 pt-3 pb-1">
+          <h6 class="fw-bold text-secondary"><i class="bi bi-people-fill me-1"></i>{{ turma }}</h6>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle mb-3">
+            <thead class="table-light">
+              <tr><th>Dia</th><th>Ordem</th><th>Professor</th><th>Matéria</th><th class="text-center" style="width:100px">Ações</th></tr>
+            </thead>
+            <tbody>
+              {% for dia, horarios in dias_dict.items %}
+                {% for h in horarios %}
+                <tr>
+                  <td>{{ h.dia }}</td>
+                  <td>{{ h.ordem }}</td>
+                  <td>{{ h.professor }}</td>
+                  <td><span class="badge bg-info text-dark">{{ h.materia }}</span></td>
+                  <td class="text-center text-nowrap">
+                    <a href="{% url 'cal:horario_update' h.pk %}" class="btn btn-sm btn-warning me-1"><i class="bi bi-pencil"></i></a>
+                    <a href="{% url 'cal:horario_delete' h.pk %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+                  </td>
+                </tr>
+                {% endfor %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-clock fs-1 d-block mb-2"></i>Nenhum horário cadastrado.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

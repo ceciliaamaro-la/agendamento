@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}Aulas / Deveres{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold text-primary"><i class="bi bi-journal-text"></i> Aulas / Deveres</h2>
+    <a href="{% url 'cal:aula_create' %}" class="btn btn-success btn-sm">
+      <i class="bi bi-plus-circle"></i> Nova Aula
+    </a>
+  </div>
+
+  <!-- Filtro por turma -->
+  <form method="get" class="d-flex gap-2 mb-4 align-items-center">
+    <select name="turma" class="form-select form-select-sm" style="max-width:240px">
+      <option value="">Todas as turmas</option>
+      {% for t in turmas %}
+        <option value="{{ t.pk }}" {% if turma_filtro == t.pk|stringformat:"s" %}selected{% endif %}>
+          {{ t.escola }} — {{ t.nome_turma }}
+        </option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-outline-primary btn-sm">Filtrar</button>
+    {% if turma_filtro %}<a href="{% url 'cal:aula_list' %}" class="btn btn-outline-secondary btn-sm">Limpar</a>{% endif %}
+  </form>
+
+  {% if tem_aulas %}
+    {% for escola, turmas_dict in agrupado.items %}
+    <div class="card mb-4 shadow-sm">
+      <div class="card-header bg-dark text-white fw-bold">
+        <i class="bi bi-building me-1"></i>{{ escola }}
+      </div>
+      <div class="card-body p-0">
+        {% for turma, aulas in turmas_dict.items %}
+        <div class="px-3 pt-3 pb-1">
+          <h6 class="fw-bold text-secondary"><i class="bi bi-people-fill me-1"></i>{{ turma }}</h6>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-3">
+            <thead class="table-light">
+              <tr>
+                <th>Data Aula</th>
+                <th>Matéria</th>
+                <th>Professor</th>
+                <th>Dever</th>
+                <th>Entrega</th>
+                <th class="text-center" style="width:130px">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for aula in aulas %}
+              <tr>
+                <td>
+                  {% if aula.data_aula %}
+                    <span class="badge bg-secondary">{{ aula.data_aula|date:"d/m/Y" }}</span>
+                  {% else %}—{% endif %}
+                </td>
+                <td><span class="badge bg-info text-dark">{{ aula.materia }}</span></td>
+                <td>{{ aula.professor }}</td>
+                <td>
+                  {% if aula.dever %}
+                    <span class="text-truncate d-inline-block" style="max-width:200px" title="{{ aula.dever }}">
+                      {{ aula.dever|truncatechars:60 }}
+                    </span>
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td>
+                  {% if aula.data_entrega %}
+                    <span class="badge bg-{{ aula.cor }}">{{ aula.data_entrega|date:"d/m/Y" }}</span>
+                    {% with dias=aula.dias_para_entrega %}
+                      {% if dias is not None %}
+                        <small class="text-muted d-block">
+                          {% if dias < 0 %}Atrasado {{ dias|abs }} d{% elif dias == 0 %}Hoje{% else %}{{ dias }} d{% endif %}
+                        </small>
+                      {% endif %}
+                    {% endwith %}
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td class="text-center text-nowrap">
+                  <a href="{% url 'cal:diario_chamada' aula.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Chamada">
+                    <i class="bi bi-person-check"></i>
+                  </a>
+                  <a href="{% url 'cal:aula_update' aula.pk %}" class="btn btn-sm btn-warning me-1">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <a href="{% url 'cal:aula_delete' aula.pk %}" class="btn btn-sm btn-danger">
+                    <i class="bi bi-trash"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-journal-x fs-1 d-block mb-2"></i>Nenhuma aula cadastrada.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

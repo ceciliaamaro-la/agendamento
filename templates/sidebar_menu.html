@@ -68,7 +68,53 @@
         <span>WhatsApp</span>
     </a>
 
-    
+    {# ── Diário / Deveres ───────────────────────────────────────────────────── #}
+    <div class="px-3 pt-3 pb-1">
+        <span class="text-uppercase text-secondary" style="font-size:.7rem;letter-spacing:.08em;">Diário Escolar</span>
+    </div>
+
+    <a href="{% url 'cal:aula_list' %}"
+       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
+              {% if 'aula' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <i class="bi bi-journal-text fs-5"></i>
+        <span>Aulas / Deveres</span>
+    </a>
+
+    <a href="{% url 'cal:diario_list' %}"
+       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
+              {% if 'diario' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <i class="bi bi-clipboard2-check fs-5"></i>
+        <span>Chamada</span>
+    </a>
+
+    <a href="{% url 'cal:horario_list' %}"
+       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
+              {% if 'horario' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <i class="bi bi-clock fs-5"></i>
+        <span>Horários</span>
+    </a>
+
+    <a href="{% url 'cal:professor_list' %}"
+       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
+              {% if 'professor' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <i class="bi bi-person-badge fs-5"></i>
+        <span>Professores</span>
+    </a>
+
+    <a href="{% url 'cal:materia_list' %}"
+       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
+              {% if 'materia' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <i class="bi bi-book fs-5"></i>
+        <span>Matérias</span>
+    </a>
+
+    <a href="{% url 'cal:livro_list' %}"
+       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
+              {% if 'livro' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <i class="bi bi-journal-bookmark fs-5"></i>
+        <span>Livros</span>
+    </a>
+
     <div class="px-3 pt-3 pb-1">
         <span class="text-uppercase text-secondary" style="font-size:.7rem;letter-spacing:.08em;">Administração</span>
     </div>

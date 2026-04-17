@@ -1,4 +1,5 @@
 from django import forms
+from django.forms import inlineformset_factory
 from django.contrib.auth.models import User
 from .models import (
     Escola,
@@ -8,6 +9,14 @@ from .models import (
     AgendaEvento,
     WhatsAppEnvio,
     TarefaCompleta,
+    Materia,
+    Professor,
+    Livro,
+    Dias,
+    OrdemHorario,
+    Horario,
+    Aula,
+    DiarioAluno,
 )
 
 
@@ -311,3 +320,161 @@ class WhatsAppEnvioForm(forms.ModelForm):
             ),
         }
         labels = {"turma": "Turma", "hash_evento": "Hash do Evento"}
+
+
+# ===============================
+# 📚 MATÉRIA
+# ===============================
+
+class MateriaForm(forms.ModelForm):
+    class Meta:
+        model = Materia
+        fields = ["nome_materia"]
+        widgets = {
+            "nome_materia": forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex: Matemática"}),
+        }
+
+
+# ===============================
+# 👨‍🏫 PROFESSOR
+# ===============================
+
+class ProfessorForm(forms.ModelForm):
+    class Meta:
+        model = Professor
+        fields = ["escola", "materia", "nome_professor"]
+        widgets = {
+            "escola": forms.Select(attrs={"class": "form-select"}),
+            "materia": forms.Select(attrs={"class": "form-select"}),
+            "nome_professor": forms.TextInput(attrs={"class": "form-control", "placeholder": "Nome completo"}),
+        }
+
+
+# ===============================
+# 📖 LIVRO
+# ===============================
+
+class LivroForm(forms.ModelForm):
+    class Meta:
+        model = Livro
+        fields = ["escola", "materia", "nome_livro"]
+        widgets = {
+            "escola": forms.Select(attrs={"class": "form-select"}),
+            "materia": forms.Select(attrs={"class": "form-select"}),
+            "nome_livro": forms.TextInput(attrs={"class": "form-control", "placeholder": "Nome do livro"}),
+        }
+
+
+# ===============================
+# 📅 DIA DA SEMANA
+# ===============================
+
+class DiasForm(forms.ModelForm):
+    class Meta:
+        model = Dias
+        fields = ["dias", "ordem"]
+        widgets = {
+            "dias": forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex: Segunda-feira"}),
+            "ordem": forms.NumberInput(attrs={"class": "form-control"}),
+        }
+
+
+# ===============================
+# 🕐 ORDEM DE HORÁRIO
+# ===============================
+
+class OrdemHorarioForm(forms.ModelForm):
+    class Meta:
+        model = OrdemHorario
+        fields = ["ordem"]
+        widgets = {
+            "ordem": forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex: 1º Horário"}),
+        }
+
+
+# ===============================
+# 🗓️ HORÁRIO
+# ===============================
+
+class HorarioForm(forms.ModelForm):
+    class Meta:
+        model = Horario
+        fields = ["escola", "turma", "dia", "ordem", "professor", "materia"]
+        widgets = {
+            "escola":    forms.Select(attrs={"class": "form-select"}),
+            "turma":     forms.Select(attrs={"class": "form-select"}),
+            "dia":       forms.Select(attrs={"class": "form-select"}),
+            "ordem":     forms.Select(attrs={"class": "form-select"}),
+            "professor": forms.Select(attrs={"class": "form-select"}),
+            "materia":   forms.Select(attrs={"class": "form-select"}),
+        }
+
+
+# ===============================
+# 🏫 AULA / DEVER
+# ===============================
+
+class AulaForm(forms.ModelForm):
+    class Meta:
+        model = Aula
+        fields = [
+            "escola", "turma", "professor", "materia", "livro",
+            "conteudo", "data_aula", "dever", "data_entrega", "observacao",
+        ]
+        widgets = {
+            "escola":       forms.Select(attrs={"class": "form-select"}),
+            "turma":        forms.Select(attrs={"class": "form-select"}),
+            "professor":    forms.Select(attrs={"class": "form-select"}),
+            "materia":      forms.Select(attrs={"class": "form-select"}),
+            "livro":        forms.Select(attrs={"class": "form-select"}),
+            "conteudo":     forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Conteúdo ministrado..."}),
+            "data_aula":    forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "dever":        forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "Dever de casa..."}),
+            "data_entrega": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "observacao":   forms.Textarea(attrs={"class": "form-control", "rows": 2, "placeholder": "Observações gerais..."}),
+        }
+        labels = {
+            "escola": "Escola", "turma": "Turma", "professor": "Professor",
+            "materia": "Matéria", "livro": "Livro", "conteudo": "Conteúdo ministrado",
+            "data_aula": "Data da aula", "dever": "Dever de casa",
+            "data_entrega": "Data de entrega", "observacao": "Observação geral",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["data_aula"].input_formats = ["%Y-%m-%d"]
+        self.fields["data_entrega"].input_formats = ["%Y-%m-%d"]
+        # Filtra matéria pelo professor selecionado (POST)
+        if "professor" in self.data:
+            try:
+                prof_id = int(self.data["professor"])
+                self.fields["materia"].queryset = Materia.objects.filter(professores__id=prof_id)
+            except (ValueError, TypeError):
+                pass
+        else:
+            self.fields["materia"].queryset = Materia.objects.all()
+
+
+# ===============================
+# 📋 DIÁRIO DO ALUNO
+# ===============================
+
+class DiarioAlunoForm(forms.ModelForm):
+    class Meta:
+        model = DiarioAluno
+        fields = ["aluno", "presente", "observacao"]
+        widgets = {
+            "aluno":      forms.HiddenInput(),
+            "presente":   forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "observacao": forms.Textarea(attrs={"class": "form-control", "rows": 2, "placeholder": "Observação individual..."}),
+        }
+        labels = {"presente": "", "observacao": "Observação"}
+
+
+DiarioAlunoFormSet = inlineformset_factory(
+    Aula, DiarioAluno,
+    form=DiarioAlunoForm,
+    extra=0,
+    can_delete=False,
+    fields=["aluno", "presente", "observacao"],
+)

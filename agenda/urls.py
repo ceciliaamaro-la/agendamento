@@ -9,6 +9,11 @@ from .views import views_agenda
 from .views import views_whats
 from .views import views_robo
 from .views import views_pdf
+from .views import views_materia
+from .views import views_professor
+from .views import views_livro
+from .views import views_horario
+from .views import views_aula
 
 app_name = 'cal'
 
@@ -75,4 +80,39 @@ urlpatterns = [
     # ─── Robô ──────────────────────────────────────────────────────────────────
     path('robo/executar/', views_robo.executar_robo, name='executar_robo'),
     path('robo/status/', views_robo.status_robo, name='status_robo'),
+
+    # ─── Matérias ──────────────────────────────────────────────────────────────
+    path('materias/', views_materia.materia_list, name='materia_list'),
+    path('materias/nova/', views_materia.materia_create, name='materia_create'),
+    path('materias/<int:pk>/editar/', views_materia.materia_update, name='materia_update'),
+    path('materias/<int:pk>/excluir/', views_materia.materia_delete, name='materia_delete'),
+
+    # ─── Professores ───────────────────────────────────────────────────────────
+    path('professores/', views_professor.professor_list, name='professor_list'),
+    path('professores/novo/', views_professor.professor_create, name='professor_create'),
+    path('professores/<int:pk>/editar/', views_professor.professor_update, name='professor_update'),
+    path('professores/<int:pk>/excluir/', views_professor.professor_delete, name='professor_delete'),
+
+    # ─── Livros ────────────────────────────────────────────────────────────────
+    path('livros/', views_livro.livro_list, name='livro_list'),
+    path('livros/novo/', views_livro.livro_create, name='livro_create'),
+    path('livros/<int:pk>/editar/', views_livro.livro_update, name='livro_update'),
+    path('livros/<int:pk>/excluir/', views_livro.livro_delete, name='livro_delete'),
+
+    # ─── Horários ──────────────────────────────────────────────────────────────
+    path('horarios/', views_horario.horario_list, name='horario_list'),
+    path('horarios/novo/', views_horario.horario_create, name='horario_create'),
+    path('horarios/<int:pk>/editar/', views_horario.horario_update, name='horario_update'),
+    path('horarios/<int:pk>/excluir/', views_horario.horario_delete, name='horario_delete'),
+
+    # ─── Aulas / Deveres ───────────────────────────────────────────────────────
+    path('aulas/', views_aula.aula_list, name='aula_list'),
+    path('aulas/nova/', views_aula.aula_create, name='aula_create'),
+    path('aulas/<int:pk>/editar/', views_aula.aula_update, name='aula_update'),
+    path('aulas/<int:pk>/excluir/', views_aula.aula_delete, name='aula_delete'),
+
+    # ─── Diário de Chamada ─────────────────────────────────────────────────────
+    path('diario/', views_aula.diario_list, name='diario_list'),
+    path('diario/aula/<int:pk>/chamada/', views_aula.diario_chamada, name='diario_chamada'),
+    path('diario/aula/<int:pk>/detalhe/', views_aula.diario_detail, name='diario_detail'),
 ]
