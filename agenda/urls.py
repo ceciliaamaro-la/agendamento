@@ -14,6 +14,7 @@ from .views import views_professor
 from .views import views_livro
 from .views import views_horario
 from .views import views_aula
+from .views import views_ordem_horario
 
 app_name = 'cal'
 
@@ -80,6 +81,12 @@ urlpatterns = [
     # ─── Robô ──────────────────────────────────────────────────────────────────
     path('robo/executar/', views_robo.executar_robo, name='executar_robo'),
     path('robo/status/', views_robo.status_robo, name='status_robo'),
+
+    # ─── Períodos / Ordem de Horário ───────────────────────────────────────────
+    path('periodos/', views_ordem_horario.ordem_list, name='ordem_list'),
+    path('periodos/novo/', views_ordem_horario.ordem_create, name='ordem_create'),
+    path('periodos/<int:pk>/editar/', views_ordem_horario.ordem_update, name='ordem_update'),
+    path('periodos/<int:pk>/excluir/', views_ordem_horario.ordem_delete, name='ordem_delete'),
 
     # ─── Matérias ──────────────────────────────────────────────────────────────
     path('materias/', views_materia.materia_list, name='materia_list'),

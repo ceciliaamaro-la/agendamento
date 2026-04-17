@@ -115,6 +115,13 @@
         <span>Livros</span>
     </a>
 
+    <a href="{% url 'cal:ordem_list' %}"
+       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
+              {% if 'ordem' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <i class="bi bi-list-ol fs-5"></i>
+        <span>Períodos</span>
+    </a>
+
     <div class="px-3 pt-3 pb-1">
         <span class="text-uppercase text-secondary" style="font-size:.7rem;letter-spacing:.08em;">Administração</span>
     </div>

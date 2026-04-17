@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Períodos do Horário{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold text-primary"><i class="bi bi-list-ol"></i> Períodos do Horário</h2>
+    <a href="{% url 'cal:ordem_create' %}" class="btn btn-success btn-sm">
+      <i class="bi bi-plus-circle"></i> Novo Período
+    </a>
+  </div>
+
+  <div class="card shadow-sm" style="max-width:480px">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>Nome</th>
+            <th class="text-center" style="width:110px">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in ordens %}
+          <tr>
+            <td class="text-muted small">{{ forloop.counter }}</td>
+            <td class="fw-semibold">{{ o.ordem }}</td>
+            <td class="text-center text-nowrap">
+              <a href="{% url 'cal:ordem_update' o.pk %}" class="btn btn-sm btn-warning me-1">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'cal:ordem_delete' o.pk %}" class="btn btn-sm btn-danger">
+                <i class="bi bi-trash"></i>
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="text-center text-muted py-4">Nenhum período cadastrado.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="text-muted small mt-3">
+    <i class="bi bi-info-circle me-1"></i>
+    Exemplos: 1ª Aula, 2ª Aula, Intervalo, Almoço, Lanche.
+    Adicione ou renomeie conforme a grade da escola.
+  </p>
+</div>
+{% endblock %}
