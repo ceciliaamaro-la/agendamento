@@ -1,17 +1,25 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.http import HttpResponseForbidden
+
 from agenda.models import Escola
 from agenda.forms import EscolaForm
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from agenda.services.escopo import (
+    admin_escola_required, superadmin_required,
+    escolas_administradas, pode_administrar_escola, is_superadmin,
+)
 
 
-@login_required
+@admin_escola_required
 def escola_list(request):
-    escolas = Escola.objects.all()
-    return render(request, 'escola/list.html', {'escolas': escolas})
+    escolas = escolas_administradas(request.user).order_by("nome_escola")
+    return render(request, 'escola/list.html', {
+        'escolas': escolas,
+        'pode_criar': is_superadmin(request.user),
+    })
 
 
-@login_required
+@superadmin_required
 def escola_nova(request):
     if request.method == 'POST':
         form = EscolaForm(request.POST)
@@ -24,9 +32,11 @@ def escola_nova(request):
     return render(request, 'escola/form.html', {'form': form, 'titulo': 'Nova Escola'})
 
 
-@login_required
+@admin_escola_required
 def escola_update(request, pk):
     escola = get_object_or_404(Escola, pk=pk)
+    if not pode_administrar_escola(request.user, escola):
+        return HttpResponseForbidden("Sem permissão para editar esta escola.")
     if request.method == 'POST':
         form = EscolaForm(request.POST, instance=escola)
         if form.is_valid():
@@ -38,7 +48,7 @@ def escola_update(request, pk):
     return render(request, 'escola/form.html', {'form': form, 'titulo': 'Editar Escola'})
 
 
-@login_required
+@superadmin_required
 def escola_delete(request, pk):
     escola = get_object_or_404(Escola, pk=pk)
     if request.method == 'POST':

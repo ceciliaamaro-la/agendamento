@@ -15,8 +15,20 @@ def _gerar_hash_manual(evento) -> str:
 
 @login_required
 def agenda_list(request):
-    # Order by inicio when available, fall back to legacy data field.
-    agendas = AgendaEvento.objects.select_related(
+    from ..services.escopo import filtrar_por_escola, is_admin_escola, escolas_do_usuario
+    # admin_escola/superadmin veem; demais usam tela /tarefas/
+    if not is_admin_escola(request.user):
+        # Mostra somente eventos das escolas visíveis (turma__escola)
+        agendas = AgendaEvento.objects.filter(
+            turma__escola__in=escolas_do_usuario(request.user)
+        )
+    else:
+        agendas = filtrar_por_escola(
+            AgendaEvento.objects.all(),
+            request.user,
+            escola_lookup='turma__escola',
+        )
+    agendas = agendas.select_related(
         'turma', 'turma__escola', 'escola', 'professor', 'materia'
     ).order_by('-inicio', '-data')
     return render(request, 'agenda/list.html', {'agendas': agendas})

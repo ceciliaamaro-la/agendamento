@@ -1,36 +1,127 @@
-"""Helpers para restringir querysets ao escopo (escola/professor) do usuário logado."""
+"""Helpers de papéis e escopo (escola/professor) para todo o sistema.
 
-from ..models import Escola, Turma, Professor, Materia, Livro, Aula
+Hierarquia de papéis (ordem decrescente de poder):
+
+    superadmin       → vê e administra TUDO de todas as escolas
+                       (papel='superadmin' OU is_superuser/is_staff do Django)
+
+    admin_escola     → administra TUDO dentro das escolas vinculadas ao perfil
+    coordenador      → mesmas permissões do admin_escola (alias)
+
+    professor        → vê/edita SOMENTE as próprias aulas/diários
+
+    aluno            → vê tarefas/horário/diário da própria turma
+    responsavel      → vê tarefas/horário/diário dos filhos vinculados
+"""
+
+from functools import wraps
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
+
+from ..models import (
+    Escola, Turma, Professor, Materia, Livro, Aula, PerfilUsuario,
+)
 
 
-# ── Identidade ─────────────────────────────────────────────────────────────
+# ── Identidade / Papel ─────────────────────────────────────────────────────
 
-def is_admin(user):
-    """Usuários com poderes administrativos (veem e editam tudo)."""
+def _perfil(user):
+    if not user or not user.is_authenticated:
+        return None
+    return getattr(user, "perfil", None)
+
+
+def papel_de(user):
+    """Retorna o papel string do usuário ('superadmin', 'admin_escola', ...) ou None."""
+    perfil = _perfil(user)
+    if perfil:
+        return perfil.papel
+    if user and user.is_authenticated and (user.is_superuser or user.is_staff):
+        return PerfilUsuario.PAPEL_SUPERADMIN
+    return None
+
+
+def is_superadmin(user):
+    """Vê e administra TUDO. Superuser/staff do Django também são tratados como superadmin."""
     if not user or not user.is_authenticated:
         return False
     if user.is_superuser or user.is_staff:
         return True
-    perfil = getattr(user, "perfil", None)
-    return bool(perfil and perfil.is_admin_escola)
+    perfil = _perfil(user)
+    return bool(perfil and perfil.papel == PerfilUsuario.PAPEL_SUPERADMIN)
+
+
+def is_admin_escola(user):
+    """Administrador de escola (inclui coordenador e superadmin)."""
+    if is_superadmin(user):
+        return True
+    perfil = _perfil(user)
+    return bool(perfil and perfil.papel in (
+        PerfilUsuario.PAPEL_ADMIN_ESCOLA,
+        PerfilUsuario.PAPEL_COORDENADOR,
+    ))
+
+
+def is_coordenador(user):
+    perfil = _perfil(user)
+    return bool(perfil and perfil.papel == PerfilUsuario.PAPEL_COORDENADOR)
+
+
+def is_professor(user):
+    perfil = _perfil(user)
+    return bool(perfil and perfil.papel == PerfilUsuario.PAPEL_PROFESSOR)
+
+
+def is_aluno(user):
+    perfil = _perfil(user)
+    return bool(perfil and perfil.papel == PerfilUsuario.PAPEL_ALUNO)
+
+
+def is_responsavel(user):
+    perfil = _perfil(user)
+    return bool(perfil and perfil.papel == PerfilUsuario.PAPEL_RESPONSAVEL)
 
 
 def professor_do_usuario(user):
-    """Retorna o Professor vinculado ao user logado (ou None)."""
-    if not user or not user.is_authenticated:
-        return None
-    perfil = getattr(user, "perfil", None)
+    """Retorna o Professor vinculado (ou None)."""
+    perfil = _perfil(user)
     return perfil.professor_vinculado if perfil else None
 
 
-# ── Querysets escopo escola ────────────────────────────────────────────────
+# ── Escolas: visíveis vs administradas ─────────────────────────────────────
 
 def escolas_do_usuario(user):
-    perfil = getattr(user, "perfil", None) if user and user.is_authenticated else None
+    """Escolas que o usuário pode VER (queryset)."""
+    perfil = _perfil(user)
     if perfil is None:
+        # Usuário sem perfil: tratamos como superadmin de fato (compat: staff/superuser)
+        return Escola.objects.all() if (user and user.is_authenticated and (user.is_superuser or user.is_staff)) else Escola.objects.none()
+    if perfil.papel == PerfilUsuario.PAPEL_SUPERADMIN or user.is_superuser or user.is_staff:
         return Escola.objects.all()
     return perfil.escolas_visiveis()
 
+
+def escolas_administradas(user):
+    """Escolas onde o usuário tem poder ADMIN (CRUD de turmas/alunos/professores etc)."""
+    if is_superadmin(user):
+        return Escola.objects.all()
+    if not is_admin_escola(user):
+        return Escola.objects.none()
+    return _perfil(user).escolas_visiveis()
+
+
+def pode_administrar_escola(user, escola):
+    """True se o user pode administrar conteúdo dessa escola."""
+    if is_superadmin(user):
+        return True
+    if not is_admin_escola(user) or escola is None:
+        return False
+    return escolas_administradas(user).filter(pk=escola.pk if hasattr(escola, "pk") else escola).exists()
+
+
+# ── Querysets escopo escola ────────────────────────────────────────────────
 
 def turmas_do_usuario(user):
     return Turma.objects.filter(escola__in=escolas_do_usuario(user))
@@ -51,18 +142,37 @@ def livros_do_usuario(user):
     return Livro.objects.filter(escola__in=escolas_do_usuario(user))
 
 
-# ── Querysets escopo professor ─────────────────────────────────────────────
+# ── Filtro genérico por escola para LIST views ─────────────────────────────
+
+def filtrar_por_escola(qs, user, escola_lookup="escola"):
+    """Filtra `qs` para conter apenas registros das escolas administradas.
+
+    - superadmin → qs intacto
+    - admin_escola → qs filtrado por <escola_lookup>__in=escolas_administradas(user)
+    - outros → qs.none()
+    """
+    if is_superadmin(user):
+        return qs
+    if is_admin_escola(user):
+        return qs.filter(**{f"{escola_lookup}__in": escolas_administradas(user)})
+    return qs.none()
+
+
+# ── Aulas (escopo professor + admin_escola) ────────────────────────────────
 
 def aulas_do_usuario(user, base_qs=None):
-    """Aulas que o usuário pode visualizar.
+    """Aulas visíveis ao usuário.
 
-    - Admin: todas (dentro das escolas visíveis).
-    - Professor com vínculo: apenas as que ele criou (filtradas por professor).
-    - Demais: nada (segurança por padrão).
+    - superadmin → todas
+    - admin_escola/coordenador → todas das escolas administradas
+    - professor → apenas as próprias
+    - outros → nada
     """
     qs = base_qs if base_qs is not None else Aula.objects.all()
-    if is_admin(user):
-        return qs.filter(escola__in=escolas_do_usuario(user))
+    if is_superadmin(user):
+        return qs
+    if is_admin_escola(user):
+        return qs.filter(escola__in=escolas_administradas(user))
     prof = professor_do_usuario(user)
     if prof is not None:
         return qs.filter(professor=prof)
@@ -70,9 +180,11 @@ def aulas_do_usuario(user, base_qs=None):
 
 
 def pode_editar_aula(user, aula):
-    """True se o usuário pode editar/excluir esta aula específica."""
-    if is_admin(user):
+    """True se o user pode editar/excluir esta aula."""
+    if is_superadmin(user):
         return True
+    if is_admin_escola(user):
+        return escolas_administradas(user).filter(pk=aula.escola_id).exists()
     prof = professor_do_usuario(user)
     return prof is not None and aula.professor_id == prof.id
 
@@ -80,10 +192,14 @@ def pode_editar_aula(user, aula):
 # ── Form helpers ───────────────────────────────────────────────────────────
 
 def aplicar_escopo_no_form(form, user):
-    """Aplica os filtros de escola/perfil aos campos cascata de um ModelForm."""
+    """Aplica filtros de escola/perfil aos campos cascata de um ModelForm."""
     fields = form.fields
     if "escola" in fields:
-        fields["escola"].queryset = escolas_do_usuario(user)
+        # admin_escola só pode salvar em suas escolas administradas
+        if is_admin_escola(user) and not is_superadmin(user):
+            fields["escola"].queryset = escolas_administradas(user)
+        else:
+            fields["escola"].queryset = escolas_do_usuario(user)
     if "turma" in fields:
         fields["turma"].queryset = turmas_do_usuario(user)
     if "professor" in fields:
@@ -93,20 +209,19 @@ def aplicar_escopo_no_form(form, user):
     if "livro" in fields:
         fields["livro"].queryset = livros_do_usuario(user)
 
-    # Defaults inteligentes baseados no perfil
-    perfil = getattr(user, "perfil", None) if user and user.is_authenticated else None
+    perfil = _perfil(user)
 
-    # Trava o campo "professor" para não-admin com vínculo (só admin pode mudar)
+    # Trava o campo "professor" para PROFESSOR comum (admin_escola e superadmin podem mudar)
     if (
         "professor" in fields
-        and not is_admin(user)
+        and not is_admin_escola(user)
         and perfil
         and perfil.professor_vinculado_id
     ):
         prof = perfil.professor_vinculado
         fields["professor"].queryset = Professor.objects.filter(pk=prof.id)
         fields["professor"].initial = prof.id
-        fields["professor"].disabled = True   # ignora POST e mantém initial
+        fields["professor"].disabled = True
         fields["professor"].empty_label = None
         fields["professor"].help_text = "Apenas o administrador pode alterar este campo."
         fields["professor"].widget.attrs["title"] = "Bloqueado: apenas administradores podem alterar."
@@ -124,3 +239,45 @@ def aplicar_escopo_no_form(form, user):
             form.initial["materia"] = prof.materia_id
         if "escola" in fields and prof.escola_id and not form.initial.get("escola"):
             form.initial["escola"] = prof.escola_id
+
+
+# ── Decorators ─────────────────────────────────────────────────────────────
+
+def _negar(request, mensagem):
+    messages.error(request, mensagem)
+    return redirect("cal:home")
+
+
+def admin_escola_required(view_func):
+    """Permite acesso a admin_escola, coordenador e superadmin."""
+    @wraps(view_func)
+    @login_required
+    def wrapped(request, *args, **kwargs):
+        if not is_admin_escola(request.user):
+            return _negar(request, "Você não tem permissão para acessar esta página.")
+        return view_func(request, *args, **kwargs)
+    return wrapped
+
+
+def superadmin_required(view_func):
+    """Permite acesso somente ao super-administrador (configurações globais)."""
+    @wraps(view_func)
+    @login_required
+    def wrapped(request, *args, **kwargs):
+        if not is_superadmin(request.user):
+            return _negar(request, "Esta área é restrita ao super-administrador.")
+        return view_func(request, *args, **kwargs)
+    return wrapped
+
+
+def papel_required(*papeis):
+    """Decorator que aceita uma lista de papéis permitidos."""
+    def decorator(view_func):
+        @wraps(view_func)
+        @login_required
+        def wrapped(request, *args, **kwargs):
+            if papel_de(request.user) not in papeis and not is_superadmin(request.user):
+                return _negar(request, "Você não tem permissão para acessar esta página.")
+            return view_func(request, *args, **kwargs)
+        return wrapped
+    return decorator

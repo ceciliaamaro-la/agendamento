@@ -65,19 +65,36 @@ def editar_usuario(request, user_id):
 
 
 @login_required
-@staff_member_required
 def listar_usuarios(request):
+    from ..services.escopo import (
+        is_admin_escola, is_superadmin, escolas_administradas,
+    )
+    if not is_admin_escola(request.user):
+        messages.error(request, 'Você não tem permissão para acessar esta página.')
+        return redirect('cal:home')
     usuarios = (
         User.objects
         .select_related('perfil', 'perfil__escola', 'perfil__professor_vinculado')
-        .order_by('username')
     )
+    if not is_superadmin(request.user):
+        escolas = escolas_administradas(request.user)
+        # Apenas usuários cujo perfil está vinculado a uma escola administrada
+        usuarios = usuarios.filter(
+            perfil__escola__in=escolas
+        ) | usuarios.filter(
+            perfil__escolas_extras__in=escolas
+        )
+        usuarios = usuarios.distinct()
+    usuarios = usuarios.order_by('username')
     return render(request, 'user/listar.html', {'usuarios': usuarios})
 
 
 @login_required
-@staff_member_required
 def adicionar_usuario(request):
+    from ..services.escopo import is_admin_escola
+    if not is_admin_escola(request.user):
+        messages.error(request, 'Sem permissão.')
+        return redirect('cal:home')
     if request.method == 'POST':
         form = UsuarioForm(request.POST)
         if form.is_valid():
@@ -90,8 +107,11 @@ def adicionar_usuario(request):
 
 
 @login_required
-@staff_member_required
 def excluir_usuario(request, user_id):
+    from ..services.escopo import is_admin_escola
+    if not is_admin_escola(request.user):
+        messages.error(request, 'Sem permissão.')
+        return redirect('cal:home')
     if request.user.id == user_id:
         messages.error(request, 'Você não pode excluir sua própria conta!')
         return redirect('cal:listar_usuarios')
@@ -104,8 +124,11 @@ def excluir_usuario(request, user_id):
 
 
 @login_required
-@staff_member_required
 def resetar_senha(request, user_id):
+    from ..services.escopo import is_admin_escola
+    if not is_admin_escola(request.user):
+        messages.error(request, 'Sem permissão.')
+        return redirect('cal:home')
     usuario = get_object_or_404(User, id=user_id)
     if request.method == 'POST':
         form = UsuarioPasswordResetForm(request.POST)
@@ -120,8 +143,11 @@ def resetar_senha(request, user_id):
 
 
 @login_required
-@staff_member_required
 def desativar_usuario(request, user_id):
+    from ..services.escopo import is_admin_escola
+    if not is_admin_escola(request.user):
+        messages.error(request, 'Sem permissão.')
+        return redirect('cal:home')
     if request.method != 'POST':
         messages.error(request, 'Ação inválida.')
         return redirect('cal:listar_usuarios')
@@ -138,13 +164,15 @@ def home(request):
     from django.db.models import Count
     from ..models import Aula, AgendaEvento
     from ..services.escopo import (
-        is_admin, professor_do_usuario, aulas_do_usuario,
+        is_admin_escola, is_superadmin, professor_do_usuario,
+        aulas_do_usuario, escolas_administradas,
     )
 
     user = request.user
     hoje = date.today()
     fim_semana = hoje + timedelta(days=7)
-    admin = is_admin(user)
+    admin = is_admin_escola(user)
+    super_admin = is_superadmin(user)
     professor = professor_do_usuario(user)
 
     aulas_qs = aulas_do_usuario(user)
@@ -181,11 +209,17 @@ def home(request):
         "chamadas_pendentes": len(pendentes_chamada),
     }
     if admin:
-        stats["total_eventos"] = AgendaEvento.objects.count()
-        stats["total_aulas"]   = Aula.objects.count()
+        if super_admin:
+            stats["total_eventos"] = AgendaEvento.objects.count()
+            stats["total_aulas"]   = Aula.objects.count()
+        else:
+            escolas_ids = list(escolas_administradas(user).values_list('id', flat=True))
+            stats["total_eventos"] = AgendaEvento.objects.filter(escola_id__in=escolas_ids).count()
+            stats["total_aulas"]   = Aula.objects.filter(escola_id__in=escolas_ids).count()
 
     return render(request, 'home.html', {
         "is_admin": admin,
+        "is_superadmin": super_admin,
         "professor": professor,
         "aulas_hoje": aulas_hoje,
         "deveres_proximos": deveres_proximos,

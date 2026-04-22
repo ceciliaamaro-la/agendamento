@@ -1,17 +1,24 @@
+"""Matérias e Períodos são GLOBAIS (compartilhados entre escolas).
+
+- Listagem: visível para qualquer admin_escola (precisa para cadastrar professores/horários)
+- Criação/edição/exclusão: somente super-administrador
+"""
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+
 from ..models import Materia
 from ..forms import MateriaForm
+from ..services.escopo import admin_escola_required, superadmin_required
 
 
-@login_required
+@admin_escola_required
 def materia_list(request):
-    materias = Materia.objects.all()
+    materias = Materia.objects.all().order_by("nome_materia")
     return render(request, "diario/materia/list.html", {"materias": materias})
 
 
-@login_required
+@superadmin_required
 def materia_create(request):
     form = MateriaForm(request.POST or None)
     if form.is_valid():
@@ -21,7 +28,7 @@ def materia_create(request):
     return render(request, "diario/materia/form.html", {"form": form, "titulo": "Nova Matéria"})
 
 
-@login_required
+@superadmin_required
 def materia_update(request, pk):
     materia = get_object_or_404(Materia, pk=pk)
     form = MateriaForm(request.POST or None, instance=materia)
@@ -32,7 +39,7 @@ def materia_update(request, pk):
     return render(request, "diario/materia/form.html", {"form": form, "titulo": "Editar Matéria"})
 
 
-@login_required
+@superadmin_required
 def materia_delete(request, pk):
     materia = get_object_or_404(Materia, pk=pk)
     if request.method == "POST":

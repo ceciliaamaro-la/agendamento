@@ -1,17 +1,20 @@
+"""Períodos (Ordem de Horário) são globais. Apenas super-admin gerencia."""
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+
 from ..models import OrdemHorario
 from ..forms import OrdemHorarioForm
+from ..services.escopo import admin_escola_required, superadmin_required
 
 
-@login_required
+@admin_escola_required
 def ordem_list(request):
     ordens = OrdemHorario.objects.all()
     return render(request, "diario/ordem_horario/list.html", {"ordens": ordens})
 
 
-@login_required
+@superadmin_required
 def ordem_create(request):
     form = OrdemHorarioForm(request.POST or None)
     if form.is_valid():
@@ -21,7 +24,7 @@ def ordem_create(request):
     return render(request, "diario/ordem_horario/form.html", {"form": form, "titulo": "Novo Período"})
 
 
-@login_required
+@superadmin_required
 def ordem_update(request, pk):
     ordem = get_object_or_404(OrdemHorario, pk=pk)
     form = OrdemHorarioForm(request.POST or None, instance=ordem)
@@ -32,7 +35,7 @@ def ordem_update(request, pk):
     return render(request, "diario/ordem_horario/form.html", {"form": form, "titulo": "Editar Período"})
 
 
-@login_required
+@superadmin_required
 def ordem_delete(request, pk):
     ordem = get_object_or_404(OrdemHorario, pk=pk)
     if request.method == "POST":

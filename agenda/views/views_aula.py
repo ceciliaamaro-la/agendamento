@@ -14,7 +14,8 @@ from ..services.aula_evento_sync import sincronizar_evento_da_aula
 from ..services.escopo import (
     aulas_do_usuario,
     pode_editar_aula,
-    is_admin,
+    is_admin_escola,
+    is_superadmin,
     professor_do_usuario,
     turmas_do_usuario,
 )
@@ -64,7 +65,7 @@ def aula_list(request):
         "turmas": turmas,
         "turma_filtro": turma_id,
         "hoje": date.today(),
-        "is_admin": is_admin(request.user),
+        "is_admin": is_admin_escola(request.user),
     })
 
 
@@ -78,7 +79,7 @@ def aula_create(request):
     if form.is_valid():
         aula = form.save(commit=False)
         # Garante que professor não-admin não burle o "disabled" via POST
-        if not is_admin(request.user):
+        if not is_admin_escola(request.user):
             prof = professor_do_usuario(request.user)
             if prof is not None:
                 aula.professor = prof
@@ -98,7 +99,7 @@ def aula_update(request, pk):
     form = AulaForm(request.POST or None, instance=aula, user=request.user)
     if form.is_valid():
         aula = form.save(commit=False)
-        if not is_admin(request.user):
+        if not is_admin_escola(request.user):
             prof = professor_do_usuario(request.user)
             if prof is not None:
                 aula.professor = prof
