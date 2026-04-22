@@ -4,9 +4,15 @@
 <div class="container-fluid mt-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="fw-bold text-primary"><i class="bi bi-clock-fill"></i> Horários</h2>
-    <a href="{% url 'cal:horario_create' %}" class="btn btn-success btn-sm">
-      <i class="bi bi-plus-circle"></i> Novo Horário
-    </a>
+    <div class="d-flex gap-2">
+      <a href="{% url 'cal:horario_pdf' %}{% if turma_filtro %}?turma={{ turma_filtro }}{% endif %}"
+         target="_blank" class="btn btn-outline-danger btn-sm">
+        <i class="bi bi-file-earmark-pdf"></i> Gerar PDF
+      </a>
+      <a href="{% url 'cal:horario_create' %}" class="btn btn-success btn-sm">
+        <i class="bi bi-plus-circle"></i> Novo Horário
+      </a>
+    </div>
   </div>
 
   <!-- Filtro por turma -->

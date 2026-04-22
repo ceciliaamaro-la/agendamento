@@ -109,6 +109,7 @@ urlpatterns = [
 
     # ─── Horários ──────────────────────────────────────────────────────────────
     path('horarios/', views_horario.horario_list, name='horario_list'),
+    path('horarios/pdf/', views_horario.horario_pdf, name='horario_pdf'),
     path('horarios/novo/', views_horario.horario_create, name='horario_create'),
     path('horarios/<int:pk>/editar/', views_horario.horario_update, name='horario_update'),
     path('horarios/<int:pk>/excluir/', views_horario.horario_delete, name='horario_delete'),
