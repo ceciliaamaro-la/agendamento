@@ -16,7 +16,7 @@ def horario_list(request):
     )
     if turma_id:
         qs = qs.filter(turma_id=turma_id)
-    qs = qs.order_by("turma__escola__nome_escola", "turma__nome_turma", "dia__ordem", "ordem__id")
+    qs = qs.order_by("turma__escola__nome_escola", "turma__nome_turma", "dia__ordem", "ordem__posicao", "ordem__id")
 
     dias_all = list(Dias.objects.order_by("ordem"))
 
@@ -35,7 +35,7 @@ def horario_list(request):
     for key, celulas in grupos_tmp.items():
         escola_nome, turma_nome = meta[key]
         ordens = list(ordens_por_turma[key].values())
-        ordens.sort(key=lambda o: o.id)
+        ordens.sort(key=lambda o: (o.posicao, o.id))
         linhas = []
         for o in ordens:
             linhas.append({
@@ -94,7 +94,7 @@ def horario_pdf(request):
     )
     if turma_id:
         qs = qs.filter(turma_id=turma_id)
-    qs = qs.order_by("turma__escola__nome_escola", "turma__nome_turma", "dia__ordem", "ordem__id")
+    qs = qs.order_by("turma__escola__nome_escola", "turma__nome_turma", "dia__ordem", "ordem__posicao", "ordem__id")
 
     # Agrupa por (escola, turma) → dict[(ordem_id, dia_id)] = horario
     grupos = defaultdict(dict)
@@ -131,7 +131,7 @@ def horario_pdf(request):
         story.append(Paragraph(f"Turma: <b>{turma_nome}</b>", sub_style))
 
         # Apenas ordens realmente registradas para esta turma
-        ordens = sorted(ordens_usadas[key].values(), key=lambda o: o.id)
+        ordens = sorted(ordens_usadas[key].values(), key=lambda o: (o.posicao, o.id))
 
         # Cabeçalho: vazio + dias
         header = [Paragraph("<b>Horário</b>", head_style)] + [
@@ -139,7 +139,10 @@ def horario_pdf(request):
         ]
         rows = [header]
         for o in ordens:
-            row = [Paragraph(f"<b>{o.ordem}</b>", cell_style)]
+            label = f"<b>{o.ordem}</b>"
+            if o.faixa:
+                label += f"<br/><font size=6 color='#888'>{o.faixa}</font>"
+            row = [Paragraph(label, cell_style)]
             for d in dias:
                 h = celulas.get((o.id, d.id))
                 if h:

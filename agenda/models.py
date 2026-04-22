@@ -259,13 +259,23 @@ class Dias(models.Model):
 
 class OrdemHorario(models.Model):
     ordem = models.CharField(max_length=20, verbose_name="Ordem do horário")
+    posicao = models.PositiveIntegerField(default=0, verbose_name="Posição")
+    inicio = models.TimeField(null=True, blank=True, verbose_name="Início")
+    termino = models.TimeField(null=True, blank=True, verbose_name="Término")
 
     class Meta:
+        ordering = ["posicao", "id"]
         verbose_name = "Ordem de Horário"
         verbose_name_plural = "Ordens de Horário"
 
     def __str__(self):
         return self.ordem
+
+    @property
+    def faixa(self):
+        if self.inicio and self.termino:
+            return f"{self.inicio.strftime('%H:%M')} - {self.termino.strftime('%H:%M')}"
+        return ""
 
 
 class Horario(models.Model):
@@ -291,7 +301,7 @@ class Horario(models.Model):
     )
 
     class Meta:
-        ordering = ["turma", "dia__ordem", "ordem"]
+        ordering = ["turma", "dia__ordem", "ordem__posicao"]
         verbose_name = "Horário"
         verbose_name_plural = "Horários"
 

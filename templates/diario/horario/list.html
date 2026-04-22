@@ -49,7 +49,10 @@
             <tbody>
               {% for linha in turma.linhas %}
               <tr>
-                <th class="bg-light text-center">{{ linha.ordem.ordem }}</th>
+                <th class="bg-light text-center">
+                  <div>{{ linha.ordem.ordem }}</div>
+                  {% if linha.ordem.faixa %}<div class="small text-muted fw-normal">{{ linha.ordem.faixa }}</div>{% endif %}
+                </th>
                 {% for h in linha.celulas %}
                   {% if h %}
                     <td class="text-center {% if not h.materia and not h.professor %}bg-light{% endif %}">

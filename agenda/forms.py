@@ -424,9 +424,12 @@ class DiasForm(forms.ModelForm):
 class OrdemHorarioForm(forms.ModelForm):
     class Meta:
         model = OrdemHorario
-        fields = ["ordem"]
+        fields = ["ordem", "posicao", "inicio", "termino"]
         widgets = {
-            "ordem": forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex: 1º Horário"}),
+            "ordem":   forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex: 1ª Aula, Intervalo, Almoço"}),
+            "posicao": forms.NumberInput(attrs={"class": "form-control", "min": 0, "placeholder": "Ordem de exibição (menor = primeiro)"}),
+            "inicio":  forms.TimeInput(attrs={"class": "form-control", "type": "time"}),
+            "termino": forms.TimeInput(attrs={"class": "form-control", "type": "time"}),
         }
 
 
