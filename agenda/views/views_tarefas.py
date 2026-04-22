@@ -62,7 +62,7 @@ def listar_tarefas(request):
             Q(inicio__gte=inicio_utc, inicio__lte=fim_utc) |
             Q(inicio__isnull=True, data__gte=data_inicio, data__lte=data_fim)
         )
-        .select_related("turma")
+        .select_related("turma", "materia", "professor")
         .order_by("inicio", "data")
     )
 
