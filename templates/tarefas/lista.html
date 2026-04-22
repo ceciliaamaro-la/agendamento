@@ -216,11 +216,15 @@ body.dark-mode .titulo-concluido     { color: #9ca3af; }
                             {% if evento.inicio %}
                                 <small class="text-muted">{{ evento.inicio|date:"H:i" }}</small>
                             {% endif %}
-                            {% if evento_data|date:"Y-m-d" == hoje|date:"Y-m-d" %}
-                                <span class="badge bg-danger ms-1" style="font-size:.65rem;">Hoje</span>
-                            {% elif evento_data|date:"Y-m-d" == amanha|date:"Y-m-d" %}
-                                <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;">Amanhã</span>
-                            {% endif %}
+                            {% with data_aviso=evento.data_entrega|default:evento.termino %}
+                                {% if data_aviso %}
+                                    {% if data_aviso|date:"Y-m-d" == hoje|date:"Y-m-d" %}
+                                        <span class="badge bg-danger ms-1" style="font-size:.65rem;">Hoje</span>
+                                    {% elif data_aviso|date:"Y-m-d" == amanha|date:"Y-m-d" %}
+                                        <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;">Amanhã</span>
+                                    {% endif %}
+                                {% endif %}
+                            {% endwith %}
                             {% if evento.tem_anexo %}
                                 {% if evento.url_anexo %}
                                     <a href="{{ evento.url_anexo }}" target="_blank" rel="noopener noreferrer"
@@ -237,11 +241,7 @@ body.dark-mode .titulo-concluido     { color: #9ca3af; }
                         </span>
                     </div>
                     <h6 class="fw-bold mb-1" style="font-size:.92rem;" id="titulo-{{ evento.id }}">{{ evento.titulo }}</h6>
-                    {% if evento.descricao %}
-                    <div class="desc-wrapper mb-2" data-id="{{ evento.id }}" data-full="{{ evento.descricao|escape }}">
-                        <p class="card-text text-muted mb-1 desc-short" style="white-space:pre-line;font-size:.82rem;"></p>
-                    </div>
-                    {% endif %}
+                    
 
                     {% if evento.descricao or evento.conteudo or evento.dever or evento.observacao or evento.professor or evento.data_entrega %}
                     <div class="detalhes-wrapper mb-2">
