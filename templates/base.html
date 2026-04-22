@@ -6,174 +6,40 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Bootstrap 5 -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="{% static 'css/dark-mode.css' %}" rel="stylesheet">
+    <meta name="theme-color" content="#0d6efd">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Agenda Escolar">
 
-<!-- Bootstrap Icons -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-<link rel="shortcut icon" href="{% static 'img/icon.png' %}" type="image/png">
-<link rel="icon" href="{% static 'img/icon.png' %}" type="image/png">
-<link rel="manifest" href="{% static 'manifest.json' %}">
-<meta name="theme-color" content="#0d6efd">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Agenda Escolar">
-<link rel="apple-touch-icon" href="{% static 'img/icon-apple.png' %}">
+    <link rel="shortcut icon" href="{% static 'img/icon.png' %}" type="image/png">
+    <link rel="icon" href="{% static 'img/icon.png' %}" type="image/png">
+    <link rel="apple-touch-icon" href="{% static 'img/icon-apple.png' %}">
+    <link rel="manifest" href="{% static 'manifest.json' %}">
 
+    <!-- Preconexão / preload de recursos críticos -->
+    <link rel="preload" href="{% static 'vendor/bootstrap-icons/fonts/bootstrap-icons.woff2' %}" as="font" type="font/woff2" crossorigin>
+
+    <!-- Vendor (local) -->
+    <link href="{% static 'vendor/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.css' %}" rel="stylesheet">
+
+    <!-- App -->
+    <link href="{% static 'css/dark-mode.css' %}" rel="stylesheet">
     <link href="{% static 'css/simple-sidebar.css' %}" rel="stylesheet">
     <link href="{% static 'css/fontawesome.min.css' %}" rel="stylesheet">
-    
-    <link rel="stylesheet" type="text/css" href="{% static 'css/fab.css' %}">
-    <link rel="stylesheet" type="text/css" href="{% static 'css/custom.css' %}">
-    <style>
-        /* Ajuste fino para o FAB em telas menores */
-        @media (max-width: 576px) {
-            #fab-container { bottom: 15px !important; right: 15px !important; }
-            .btn-fab { width: 50px; height: 50px; }
-            .fab-label { right: 55px; }
-        }
+    <link href="{% static 'css/fab.css' %}" rel="stylesheet">
+    <link href="{% static 'css/custom.css' %}" rel="stylesheet">
+    <link href="{% static 'css/app.css' %}" rel="stylesheet">
 
-        /* Preloader */
-        #preloader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.95);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
-        }
-        body.dark-mode #preloader {
-            background-color: rgba(33, 37, 41, 0.95);
-        }
-        .loader-container {
-            position: relative;
-            text-align: center;
-        }
-        .loader {
-            display: block;
-            position: relative;
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            border: 3px solid transparent;
-            border-top-color: #0d6efd; /* Azul Bootstrap */
-            -webkit-animation: spin 2s linear infinite;
-            animation: spin 2s linear infinite;
-        }
-        .loader:before {
-            content: "";
-            position: absolute;
-            top: 5px;
-            left: 5px;
-            right: 5px;
-            bottom: 5px;
-            border-radius: 50%;
-            border: 3px solid transparent;
-            border-top-color: #dc3545; /* Vermelho Bootstrap */
-            -webkit-animation: spin 3s linear infinite;
-            animation: spin 3s linear infinite;
-        }
-        .loader:after {
-            content: "";
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            right: 15px;
-            bottom: 15px;
-            border-radius: 50%;
-            border: 3px solid transparent;
-            border-top-color: #198754; /* Verde Bootstrap */
-            -webkit-animation: spin 1.5s linear infinite;
-            animation: spin 1.5s linear infinite;
-        }
-        .loader-home-link {
-            position: absolute;
-            top: 180px;
-            left: 50%;
-            transform: translateX(-50%);
-            white-space: nowrap;
-            color: #6c757d;
-            text-decoration: none;
-            font-size: 0.85rem;
-            font-weight: bold;
-            opacity: 0.8;
-            transition: opacity 0.2s;
-        }
-        .loader-home-link:hover {
-            opacity: 1;
-            color: #0d6efd;
-        }
-
-        @-webkit-keyframes spin {
-            0%   { -webkit-transform: rotate(0deg); transform: rotate(0deg); }
-            100% { -webkit-transform: rotate(360deg); transform: rotate(360deg); }
-        }
-        @keyframes spin {
-            0%   { -webkit-transform: rotate(0deg); transform: rotate(0deg); }
-            100% { -webkit-transform: rotate(360deg); transform: rotate(360deg); }
-        }
-
-        /* Dark Mode fixes for headers */
-        body.dark-mode .bg-white {
-            background-color: #212529 !important;
-            color: #f8f9fa !important;
-        }
-        body.dark-mode .card.bg-white {
-            background-color: #2b3035 !important;
-        }
-        body.dark-mode .shadow-sm {
-            box-shadow: 0 .125rem .25rem rgba(0,0,0,.5) !important;
-        }
-        body.dark-mode .border {
-            border-color: #444 !important;
-        }
-    </style>
-
-    <style>
-
-.form-control:focus,
-.form-select:focus{
-    border-color:#6f42c1;
-    box-shadow:0 0 0 0.2rem rgba(111,66,193,.25);
-}
-
-.form-control,
-.form-select{
-    transition:all .2s;
-}
-
-.form-control:hover{
-    border-color:#6f42c1;
-}
-
-textarea{
-    resize:none;
-}
-
-</style>
     <title>{% block title %}{% endblock %} | Agenda Escolar</title>
+    {% block extra_head %}{% endblock %}
 
-    <style>
-        /* Sidebar layout */
-        @media (min-width: 992px) {
-            body { padding-right: 230px; }
-        }
-        /* Space for hamburger FAB on mobile */
-        @media (max-width: 991.98px) {
-            main { padding-bottom: 90px !important; }
-        }
-    </style>
+    <script src="{% static 'js/app.js' %}" defer></script>
 </head>
-<body class="loading">
+<body>
     <!-- Preloader -->
-    <div id="preloader">
+    <div id="preloader" aria-hidden="true">
         <div class="loader-container">
             <div class="loader"></div>
             <a href="{% url 'cal:home' %}" class="loader-home-link no-loader">
@@ -215,85 +81,7 @@ textarea{
     </div>
     {% endif %}
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.6/jquery.inputmask.min.js" defer></script>
-<script>
-    // Dark Mode Toggle
-    function toggleDarkMode() {
-        const body = document.body;
-        body.classList.toggle('dark-mode');
-        const isDarkMode = body.classList.contains('dark-mode');
-        localStorage.setItem('darkMode', isDarkMode);
-        
-        // Atualiza ícone do botão se necessário
-        const icon = document.querySelector('#fab-actions .bi-moon-stars, #fab-actions .bi-sun');
-        if (icon) {
-            if (isDarkMode) {
-                icon.classList.replace('bi-moon-stars', 'bi-sun');
-            } else {
-                icon.classList.replace('bi-sun', 'bi-moon-stars');
-            }
-        }
-    }
-
-    // Apply dark mode on load
-    (function() {
-        const savedDarkMode = localStorage.getItem('darkMode');
-        if (savedDarkMode === 'true') {
-            document.body.classList.add('dark-mode');
-        }
-    })();
-
-    // Preloader and Page Transition
-    window.addEventListener('load', function() {
-        const preloader = document.getElementById('preloader');
-        preloader.style.opacity = '0';
-        setTimeout(() => {
-            preloader.style.visibility = 'hidden';
-            document.body.classList.remove('loading');
-        }, 300);
-    });
-
-    // Show preloader on internal link click
-    document.addEventListener('click', function(e) {
-        const target = e.target.closest('a');
-        if (target && 
-            target.href && 
-            target.href.startsWith(window.location.origin) && 
-            !target.getAttribute('target') && 
-            !target.href.includes('#') &&
-            !target.classList.contains('no-loader')) {
-            document.getElementById('preloader').style.visibility = 'visible';
-            document.getElementById('preloader').style.opacity = '1';
-        }
-    });
-
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/static/sw.js')
-                .then(reg => console.log('SW registrado!', reg))
-                .catch(err => console.log('Erro SW:', err));
-        });
-    }
-</script>
-<script>
-$(document).ready(function(){
-  // Input mask (se existir campo com esse id)
-  if ($('#id_limite').length) {
-    $('#id_limite').inputmask('decimal', {
-      'alias': 'numeric',
-      'groupSeparator': '.',
-      'autoGroup': true,
-      'digits': 2,
-      'digitsOptional': false,
-      'placeholder': '0',
-      'radixPoint': ',',
-      'rightAlign': false
-    });
-  }
-});
-</script>
-
+    <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}" defer></script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>
