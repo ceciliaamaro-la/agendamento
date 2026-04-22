@@ -1,14 +1,16 @@
 """Endpoints AJAX para preenchimento em cascata dos formulários de Aula/Evento.
 
-Permite que selecionar um campo (Professor, Turma ou Matéria) preencha
-automaticamente os demais conforme as ForeignKeys cadastradas.
+Selecionar um campo (Professor, Turma ou Matéria) preenche automaticamente
+os demais conforme as ForeignKeys cadastradas, sempre **respeitando o escopo
+de escolas do usuário logado** (PerfilUsuario.escolas_visiveis).
 """
 
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_GET
 
-from ..models import Professor, Turma, Materia, Livro, Horario
+from ..models import Professor, Turma, Materia, Livro
+from ..services.escopo import escolas_do_usuario
 
 
 def _opt(qs, label_attr):
@@ -19,19 +21,27 @@ def _opt(qs, label_attr):
 @require_GET
 def cascade_professor(request, pk):
     """Dado um professor, devolve escola, matéria(s) e turmas vinculadas."""
+    escolas_ids = list(escolas_do_usuario(request.user).values_list("id", flat=True))
     try:
-        prof = Professor.objects.select_related("escola", "materia").get(pk=pk)
+        prof = Professor.objects.select_related("escola", "materia").get(
+            pk=pk, escola_id__in=escolas_ids
+        )
     except Professor.DoesNotExist:
         return JsonResponse({"ok": False}, status=404)
 
     materias = Materia.objects.filter(professores__id=prof.id).distinct()
-    turmas = Turma.objects.filter(horarios__professor_id=prof.id).distinct()
+    turmas = (
+        Turma.objects
+        .filter(escola_id__in=escolas_ids, horarios__professor_id=prof.id)
+        .distinct()
+    )
     livros = Livro.objects.filter(escola_id=prof.escola_id, materia_id=prof.materia_id)
 
     return JsonResponse({
         "ok": True,
         "escola": {"id": prof.escola_id, "text": prof.escola.nome_escola or ""},
         "materia_default": prof.materia_id,
+        "livro_default": livros.first().id if livros.count() == 1 else None,
         "materias": _opt(materias, "nome_materia"),
         "turmas": _opt(turmas, "nome_turma"),
         "livros": _opt(livros, "nome_livro"),
@@ -42,12 +52,17 @@ def cascade_professor(request, pk):
 @require_GET
 def cascade_turma(request, pk):
     """Dada uma turma, devolve escola e os professores/matérias vinculadas pelos horários."""
+    escolas_ids = list(escolas_do_usuario(request.user).values_list("id", flat=True))
     try:
-        turma = Turma.objects.select_related("escola").get(pk=pk)
+        turma = Turma.objects.select_related("escola").get(
+            pk=pk, escola_id__in=escolas_ids
+        )
     except Turma.DoesNotExist:
         return JsonResponse({"ok": False}, status=404)
 
-    professores = Professor.objects.filter(horarios__turma_id=turma.id).distinct()
+    professores = Professor.objects.filter(
+        horarios__turma_id=turma.id, escola_id__in=escolas_ids
+    ).distinct()
     materias = Materia.objects.filter(horarios__turma_id=turma.id).distinct()
 
     return JsonResponse({
@@ -65,14 +80,18 @@ def cascade_turma(request, pk):
 @require_GET
 def cascade_materia(request, pk):
     """Dada uma matéria (e opcionalmente escola), devolve professores e livros."""
+    escolas_ids = list(escolas_do_usuario(request.user).values_list("id", flat=True))
     escola_id = request.GET.get("escola") or None
-    professores = Professor.objects.filter(materia_id=pk)
-    livros = Livro.objects.filter(materia_id=pk)
+    professores = Professor.objects.filter(materia_id=pk, escola_id__in=escolas_ids)
+    livros = Livro.objects.filter(materia_id=pk, escola_id__in=escolas_ids)
     if escola_id:
         professores = professores.filter(escola_id=escola_id)
         livros = livros.filter(escola_id=escola_id)
+    professores = professores.distinct()
+    livros = livros.distinct()
     return JsonResponse({
         "ok": True,
-        "professores": _opt(professores.distinct(), "nome_professor"),
-        "livros": _opt(livros.distinct(), "nome_livro"),
+        "professores": _opt(professores, "nome_professor"),
+        "livros": _opt(livros, "nome_livro"),
+        "livro_default": livros.first().id if livros.count() == 1 else None,
     })

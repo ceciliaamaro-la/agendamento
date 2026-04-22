@@ -356,6 +356,77 @@ class DiarioAluno(models.Model):
         return f"{'Presente' if self.presente else 'Falta'} — {self.aluno} — {self.aula}"
 
 
+class PerfilUsuario(models.Model):
+    """Perfil estendido — liga User à Escola e define papel/hierarquia.
+
+    Mantemos o User padrão do Django intocado e adicionamos esta tabela nova
+    para que o robô do Bernoulli (que NÃO mexe em User nem em PerfilUsuario)
+    siga funcionando sem qualquer alteração.
+    """
+
+    PAPEL_ALUNO        = "aluno"
+    PAPEL_RESPONSAVEL  = "responsavel"
+    PAPEL_PROFESSOR    = "professor"
+    PAPEL_COORDENADOR  = "coordenador"
+    PAPEL_ADMIN_ESCOLA = "admin_escola"
+    PAPEL_SUPERADMIN   = "superadmin"
+
+    PAPEL_CHOICES = [
+        (PAPEL_ALUNO,        "Aluno"),
+        (PAPEL_RESPONSAVEL,  "Responsável"),
+        (PAPEL_PROFESSOR,    "Professor"),
+        (PAPEL_COORDENADOR,  "Coordenador"),
+        (PAPEL_ADMIN_ESCOLA, "Administrador da Escola"),
+        (PAPEL_SUPERADMIN,   "Super-admin"),
+    ]
+
+    usuario = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="perfil"
+    )
+    escola = models.ForeignKey(
+        Escola, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="perfis", verbose_name="Escola padrão",
+    )
+    escolas_extras = models.ManyToManyField(
+        Escola, blank=True, related_name="perfis_extras",
+        help_text="Outras escolas que este usuário pode acessar (multi-unidade).",
+    )
+    papel = models.CharField(
+        max_length=20, choices=PAPEL_CHOICES, default=PAPEL_RESPONSAVEL,
+    )
+    professor_vinculado = models.ForeignKey(
+        Professor, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="usuarios_vinculados",
+        help_text="Quando preenchido, formulários já vêm com este professor selecionado.",
+    )
+
+    class Meta:
+        verbose_name = "Perfil do Usuário"
+        verbose_name_plural = "Perfis dos Usuários"
+
+    def __str__(self):
+        return f"{self.usuario.username} ({self.get_papel_display()})"
+
+    # ── Helpers ───────────────────────────────────────────────────────────
+    def escolas_visiveis(self):
+        """Retorna queryset de escolas que o usuário pode ver."""
+        ids = set()
+        if self.escola_id:
+            ids.add(self.escola_id)
+        ids.update(self.escolas_extras.values_list("id", flat=True))
+        if self.papel == self.PAPEL_SUPERADMIN or not ids:
+            return Escola.objects.all()
+        return Escola.objects.filter(id__in=ids)
+
+    @property
+    def is_admin_escola(self):
+        return self.papel in (
+            self.PAPEL_ADMIN_ESCOLA,
+            self.PAPEL_COORDENADOR,
+            self.PAPEL_SUPERADMIN,
+        )
+
+
 class WhatsAppEnvio(models.Model):
 
     turma = models.ForeignKey(

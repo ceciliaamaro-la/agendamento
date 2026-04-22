@@ -51,9 +51,14 @@ def aula_list(request):
 
 @login_required
 def aula_create(request):
-    form = AulaForm(request.POST or None)
+    initial = {}
+    ultima_turma = request.session.get("ultima_turma_id")
+    if ultima_turma:
+        initial["turma"] = ultima_turma
+    form = AulaForm(request.POST or None, user=request.user, initial=initial)
     if form.is_valid():
         aula = form.save()
+        request.session["ultima_turma_id"] = aula.turma_id
         sincronizar_evento_da_aula(aula)
         messages.success(request, "Aula cadastrada e publicada na agenda. Faça a chamada agora.")
         return redirect("cal:diario_chamada", pk=aula.pk)
@@ -63,9 +68,10 @@ def aula_create(request):
 @login_required
 def aula_update(request, pk):
     aula = get_object_or_404(Aula, pk=pk)
-    form = AulaForm(request.POST or None, instance=aula)
+    form = AulaForm(request.POST or None, instance=aula, user=request.user)
     if form.is_valid():
         aula = form.save()
+        request.session["ultima_turma_id"] = aula.turma_id
         sincronizar_evento_da_aula(aula)
         messages.success(request, "Aula atualizada (e evento da agenda sincronizado).")
         return redirect("cal:aula_list")

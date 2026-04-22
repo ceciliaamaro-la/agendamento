@@ -323,6 +323,7 @@ class AgendaEventoForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         for name in ("escola", "professor", "materia", "livro",
                      "conteudo", "dever", "observacao", "data_entrega",
@@ -333,6 +334,10 @@ class AgendaEventoForm(forms.ModelForm):
         self.fields["inicio"].input_formats = ["%Y-%m-%dT%H:%M"]
         self.fields["termino"].input_formats = ["%Y-%m-%dT%H:%M"]
         self.fields["data_entrega"].input_formats = ["%Y-%m-%d"]
+
+        if user is not None:
+            from .services.escopo import aplicar_escopo_no_form
+            aplicar_escopo_no_form(self, user)
 
 
 # ===============================
@@ -474,6 +479,7 @@ class AulaForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         self.fields["data_aula"].input_formats = ["%Y-%m-%d"]
         self.fields["data_entrega"].input_formats = ["%Y-%m-%d"]
@@ -486,6 +492,11 @@ class AulaForm(forms.ModelForm):
                 pass
         else:
             self.fields["materia"].queryset = Materia.objects.all()
+
+        # Restringe todos os selects à(s) escola(s) do usuário e aplica defaults
+        if user is not None:
+            from .services.escopo import aplicar_escopo_no_form
+            aplicar_escopo_no_form(self, user)
 
 
 # ===============================

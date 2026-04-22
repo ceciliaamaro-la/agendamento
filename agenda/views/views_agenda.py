@@ -24,23 +24,29 @@ def agenda_list(request):
 @login_required
 def agenda_create(request):
     if request.method == 'POST':
-        form = AgendaEventoForm(request.POST)
+        form = AgendaEventoForm(request.POST, user=request.user)
         if form.is_valid():
             evento = form.save(commit=False)
             if not evento.hash:
                 evento.hash = _gerar_hash_manual(evento)
             evento.save()
+            if evento.turma_id:
+                request.session["ultima_turma_id"] = evento.turma_id
             messages.success(request, 'Evento criado com sucesso!')
             return redirect('cal:agenda_list')
     else:
-        form = AgendaEventoForm()
+        initial = {}
+        ultima_turma = request.session.get("ultima_turma_id")
+        if ultima_turma:
+            initial["turma"] = ultima_turma
+        form = AgendaEventoForm(user=request.user, initial=initial)
     return render(request, 'agenda/form.html', {'form': form, 'titulo': 'Novo Evento'})
 
 @login_required
 def agenda_update(request, pk):
     agenda = get_object_or_404(AgendaEvento, pk=pk)
     if request.method == 'POST':
-        form = AgendaEventoForm(request.POST, instance=agenda)
+        form = AgendaEventoForm(request.POST, instance=agenda, user=request.user)
         if form.is_valid():
             evento = form.save(commit=False)
             if not evento.hash:
@@ -49,7 +55,7 @@ def agenda_update(request, pk):
             messages.success(request, 'Evento atualizado com sucesso!')
             return redirect('cal:agenda_list')
     else:
-        form = AgendaEventoForm(instance=agenda)
+        form = AgendaEventoForm(instance=agenda, user=request.user)
     return render(request, 'agenda/form.html', {'form': form, 'titulo': 'Editar Evento'})
 
 @login_required
