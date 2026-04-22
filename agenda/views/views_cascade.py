@@ -30,11 +30,16 @@ def cascade_professor(request, pk):
         return JsonResponse({"ok": False}, status=404)
 
     materias = Materia.objects.filter(professores__id=prof.id).distinct()
+
+    # Turmas: tenta pelo vínculo de Horário; se vazio, cai pra todas as turmas da escola
     turmas = (
         Turma.objects
-        .filter(escola_id__in=escolas_ids, horarios__professor_id=prof.id)
+        .filter(escola_id=prof.escola_id, horarios__professor_id=prof.id)
         .distinct()
     )
+    if not turmas.exists():
+        turmas = Turma.objects.filter(escola_id=prof.escola_id)
+
     livros = Livro.objects.filter(escola_id=prof.escola_id, materia_id=prof.materia_id)
 
     return JsonResponse({
@@ -60,10 +65,19 @@ def cascade_turma(request, pk):
     except Turma.DoesNotExist:
         return JsonResponse({"ok": False}, status=404)
 
+    # Professores: tenta pelo vínculo de Horário; senão, todos da escola da turma
     professores = Professor.objects.filter(
-        horarios__turma_id=turma.id, escola_id__in=escolas_ids
+        horarios__turma_id=turma.id, escola_id=turma.escola_id
     ).distinct()
+    if not professores.exists() and turma.escola_id:
+        professores = Professor.objects.filter(escola_id=turma.escola_id)
+
     materias = Materia.objects.filter(horarios__turma_id=turma.id).distinct()
+    if not materias.exists() and turma.escola_id:
+        # Mostra matérias dos professores da escola
+        materias = Materia.objects.filter(
+            professores__escola_id=turma.escola_id
+        ).distinct()
 
     return JsonResponse({
         "ok": True,

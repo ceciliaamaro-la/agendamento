@@ -32,6 +32,8 @@
   function setOptions(select, options, opts) {
     if (!select) return false;
     opts = opts || {};
+    // Se a lista vier vazia e o caller pediu para preservar, não toca no select
+    if ((!options || options.length === 0) && opts.skipIfEmpty) return false;
     var keep = opts.keep || false;
     var current = select.value;
     var selected = opts.selected != null ? String(opts.selected) : "";
@@ -123,10 +125,14 @@
       if (d.escola && d.escola.id) setSingle($cascade("escola"), d.escola.id, d.escola.text);
 
       var profSel = $cascade("professor");
-      var profChanged = setOptions(profSel, d.professores, { keep: true, autoOnSingle: true });
+      var profChanged = setOptions(profSel, d.professores, {
+        keep: true, autoOnSingle: true, skipIfEmpty: true,
+      });
 
       var matSel = $cascade("materia");
-      var matChanged = setOptions(matSel, d.materias, { keep: true, autoOnSingle: true });
+      var matChanged = setOptions(matSel, d.materias, {
+        keep: true, autoOnSingle: true, skipIfEmpty: true,
+      });
 
       // Cascata em cadeia
       if (profChanged) fireChange(profSel);
@@ -142,11 +148,13 @@
     fetchJSON(url("materia", pk) + qs).then(function (d) {
       if (!d.ok) return;
       var profSel = $cascade("professor");
-      setOptions(profSel, d.professores, { keep: true, autoOnSingle: true });
+      setOptions(profSel, d.professores, {
+        keep: true, autoOnSingle: true, skipIfEmpty: true,
+      });
 
       var livroSel = $cascade("livro");
       setOptions(livroSel, d.livros, {
-        selected: d.livro_default, keep: true, autoOnSingle: true,
+        selected: d.livro_default, keep: true, autoOnSingle: true, skipIfEmpty: true,
       });
     }).catch(function () {});
   }
