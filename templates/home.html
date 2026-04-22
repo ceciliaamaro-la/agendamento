@@ -1,128 +1,351 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Agenda Escolar{% endblock %}
+{% block title %}Início{% endblock %}
+
+{% block extra_head %}
+<style>
+    .home-hero {
+        background: linear-gradient(135deg, #0d6efd 0%, #6f42c1 100%);
+        color: #fff;
+        border-radius: 1rem;
+        padding: 1.25rem 1.5rem;
+        box-shadow: 0 8px 24px rgba(13, 110, 253, .25);
+    }
+    body.dark-mode .home-hero {
+        background: linear-gradient(135deg, #0a3d8c 0%, #4c2a91 100%);
+    }
+    .stat-card {
+        border: none;
+        border-radius: .9rem;
+        transition: transform .15s ease, box-shadow .15s ease;
+        overflow: hidden;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1.25rem rgba(0,0,0,.08);
+    }
+    .stat-card .stat-icon {
+        font-size: 1.6rem;
+        line-height: 1;
+        opacity: .85;
+    }
+    .stat-card .stat-num {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+    .stat-card .stat-label {
+        font-size: .78rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        opacity: .75;
+    }
+    .quick-action {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        padding: .85rem 1rem;
+        border-radius: .75rem;
+        border: 1px solid #e5e7eb;
+        text-decoration: none;
+        color: inherit;
+        transition: border-color .15s, background .15s, transform .1s;
+        background: #fff;
+    }
+    body.dark-mode .quick-action {
+        background: #2b3035;
+        border-color: #444;
+        color: #f8f9fa;
+    }
+    .quick-action:hover {
+        border-color: #0d6efd;
+        background: #f8fbff;
+        transform: translateY(-1px);
+        color: inherit;
+    }
+    body.dark-mode .quick-action:hover {
+        background: #313844;
+    }
+    .quick-action .qa-icon {
+        width: 38px; height: 38px;
+        display: inline-flex; align-items: center; justify-content: center;
+        border-radius: 50%; font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+    .list-row {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: .75rem;
+        padding: .65rem .9rem;
+        border-radius: .55rem;
+        transition: background .12s;
+    }
+    .list-row + .list-row { margin-top: .25rem; }
+    .list-row:hover { background: rgba(13, 110, 253, .06); }
+    body.dark-mode .list-row:hover { background: rgba(255,255,255,.05); }
+    .list-row .meta { font-size: .78rem; }
+    .panel-card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 .25rem .85rem rgba(0,0,0,.05);
+    }
+    body.dark-mode .panel-card { background: #2b3035; }
+    .panel-title {
+        font-size: .85rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .05em; color: #6c757d; margin-bottom: 0;
+    }
+    body.dark-mode .panel-title { color: #adb5bd; }
+    .empty-state {
+        text-align: center; padding: 1.25rem .5rem; color: #98a1ac; font-size: .9rem;
+    }
+    body.dark-mode .empty-state { color: #6c757d; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid py-3">
 
-    {% if user.is_authenticated %}
-
-    <div class="row g-4 mb-4">
-        <div class="col-12">
-            <div class="alert alert-primary d-flex align-items-center gap-2 shadow-sm mb-0" role="alert">
-                <i class="bi bi-person-circle fs-4"></i>
-                <span>Bem-vindo, <strong>{{ user.username }}</strong>!</span>
+    {# ── Hero / Saudação ──────────────────────────────────────────────── #}
+    <div class="home-hero mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <h1 class="h4 fw-bold mb-1">
+                    Olá, {{ user.first_name|default:user.username }}!
+                </h1>
+                <p class="mb-0 small opacity-75">
+                    {% if professor %}
+                        <i class="bi bi-person-workspace me-1"></i>
+                        {{ professor.nome_professor }} · {{ professor.materia }}
+                    {% elif is_admin %}
+                        <i class="bi bi-shield-check me-1"></i> Administrador
+                    {% else %}
+                        Bem-vindo(a) à sua agenda escolar.
+                    {% endif %}
+                </p>
+            </div>
+            <div class="text-end">
+                <div class="small opacity-75">{{ hoje|date:"l" }}</div>
+                <div class="fw-semibold">{{ hoje|date:"d/m/Y" }}</div>
             </div>
         </div>
     </div>
 
-    {# ── Seção Principal ── #}
-    <h6 class="text-uppercase text-muted fw-semibold mb-3" style="letter-spacing:.08em;">Minhas Tarefas</h6>
-    <div class="row g-4 mb-4">
-        <div class="col-12 col-md-6 col-xl-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center py-4">
-                    <i class="bi bi-journal-check fs-1 text-primary mb-3 d-block"></i>
-                    <h5 class="card-title fw-semibold">Tarefas do Aluno</h5>
-                    <p class="text-muted small">Veja as tarefas pendentes e concluídas do seu filho(a).</p>
-                    <a href="{% url 'cal:listar_tarefas' %}" class="btn btn-primary btn-sm mt-auto">
-                        <i class="bi bi-arrow-right-circle me-1"></i> Acessar
-                    </a>
+    {# ── Stats ────────────────────────────────────────────────────────── #}
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <a href="{% url 'cal:aula_list' %}" class="text-decoration-none">
+                <div class="card stat-card bg-primary text-white h-100">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="stat-num">{{ stats.aulas_hoje }}</div>
+                            <div class="stat-label">Aulas hoje</div>
+                        </div>
+                        <i class="bi bi-journal-text stat-icon"></i>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
-        {% if user.is_staff %}
-        <div class="col-12 col-md-6 col-xl-4">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center py-4">
-                    <i class="bi bi-calendar-event fs-1 text-warning mb-3 d-block"></i>
-                    <h5 class="card-title fw-semibold">Eventos da Agenda</h5>
-                    <p class="text-muted small">Visualize todos os eventos sincronizados da turma.</p>
-                    <a href="{% url 'cal:agenda_list' %}" class="btn btn-outline-warning btn-sm mt-auto">
-                        <i class="bi bi-arrow-right-circle me-1"></i> Acessar
-                    </a>
+        <div class="col-6 col-md-3">
+            <a href="{% url 'cal:aula_list' %}" class="text-decoration-none">
+                <div class="card stat-card bg-warning text-dark h-100">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="stat-num">{{ stats.deveres_semana }}</div>
+                            <div class="stat-label">Deveres na semana</div>
+                        </div>
+                        <i class="bi bi-clipboard-check stat-icon"></i>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
+        <div class="col-6 col-md-3">
+            <a href="{% url 'cal:diario_list' %}" class="text-decoration-none">
+                <div class="card stat-card bg-danger text-white h-100">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="stat-num">{{ stats.chamadas_pendentes }}</div>
+                            <div class="stat-label">Chamadas pendentes</div>
+                        </div>
+                        <i class="bi bi-person-x stat-icon"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% if is_admin %}
+        <div class="col-6 col-md-3">
+            <a href="{% url 'cal:agenda_list' %}" class="text-decoration-none">
+                <div class="card stat-card bg-dark text-white h-100">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="stat-num">{{ stats.total_eventos }}</div>
+                            <div class="stat-label">Eventos no sistema</div>
+                        </div>
+                        <i class="bi bi-calendar-event stat-icon"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% else %}
+        <div class="col-6 col-md-3">
+            <a href="{% url 'cal:listar_tarefas' %}" class="text-decoration-none">
+                <div class="card stat-card bg-success text-white h-100">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="stat-num"><i class="bi bi-arrow-right"></i></div>
+                            <div class="stat-label">Minhas tarefas</div>
+                        </div>
+                        <i class="bi bi-list-task stat-icon"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endif %}
     </div>
 
-    
-    {# ── Seção Cadastros (staff) ── #}
-    <h6 class="text-uppercase text-muted fw-semibold mb-3 mt-2" style="letter-spacing:.08em;">Cadastros</h6>
-    <div class="row g-4 mb-4">
-
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center py-4">
-                    <i class="bi bi-building fs-1 text-primary mb-3 d-block"></i>
-                    <h5 class="card-title fw-semibold">Escolas</h5>
-                    <p class="text-muted small">Gerencie as escolas cadastradas.</p>
-                    <a href="{% url 'cal:escola_list' %}" class="btn btn-outline-primary btn-sm mt-auto">
-                        <i class="bi bi-arrow-right-circle me-1"></i> Acessar
-                    </a>
+    {# ── Ações rápidas ────────────────────────────────────────────────── #}
+    <h6 class="panel-title mb-2">Ações rápidas</h6>
+    <div class="row g-2 mb-4">
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="{% url 'cal:aula_create' %}" class="quick-action">
+                <span class="qa-icon bg-primary text-white"><i class="bi bi-plus-lg"></i></span>
+                <div>
+                    <div class="fw-semibold">Nova aula / dever</div>
+                    <small class="text-muted">Registrar conteúdo do dia</small>
                 </div>
-            </div>
+            </a>
         </div>
-
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center py-4">
-                    <i class="bi bi-people fs-1 text-success mb-3 d-block"></i>
-                    <h5 class="card-title fw-semibold">Turmas</h5>
-                    <p class="text-muted small">Organize as turmas por escola.</p>
-                    <a href="{% url 'cal:turma_list' %}" class="btn btn-outline-success btn-sm mt-auto">
-                        <i class="bi bi-arrow-right-circle me-1"></i> Acessar
-                    </a>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="{% url 'cal:diario_list' %}" class="quick-action">
+                <span class="qa-icon bg-success text-white"><i class="bi bi-person-check"></i></span>
+                <div>
+                    <div class="fw-semibold">Fazer chamada</div>
+                    <small class="text-muted">Marcar presenças</small>
                 </div>
-            </div>
+            </a>
         </div>
-
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center py-4">
-                    <i class="bi bi-person-lines-fill fs-1 text-info mb-3 d-block"></i>
-                    <h5 class="card-title fw-semibold">Alunos</h5>
-                    <p class="text-muted small">Gerencie alunos e vínculos com usuários.</p>
-                    <a href="{% url 'cal:aluno_list' %}" class="btn btn-outline-info btn-sm mt-auto">
-                        <i class="bi bi-arrow-right-circle me-1"></i> Acessar
-                    </a>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="{% url 'cal:horario_list' %}" class="quick-action">
+                <span class="qa-icon bg-info text-white"><i class="bi bi-clock"></i></span>
+                <div>
+                    <div class="fw-semibold">Meu horário</div>
+                    <small class="text-muted">Grade de aulas</small>
                 </div>
-            </div>
+            </a>
         </div>
-
-        <div class="col-12 col-md-6 col-xl-3">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body text-center py-4">
-                    <i class="bi bi-plug fs-1 text-warning mb-3 d-block"></i>
-                    <h5 class="card-title fw-semibold">Conexões</h5>
-                    <p class="text-muted small">Credenciais do robô Bernoulli por turma.</p>
-                    <a href="{% url 'cal:conexao_list' %}" class="btn btn-outline-warning btn-sm mt-auto">
-                        <i class="bi bi-arrow-right-circle me-1"></i> Acessar
-                    </a>
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="{% url 'cal:listar_tarefas' %}" class="quick-action">
+                <span class="qa-icon bg-warning text-dark"><i class="bi bi-list-task"></i></span>
+                <div>
+                    <div class="fw-semibold">Minhas tarefas</div>
+                    <small class="text-muted">Eventos da agenda</small>
                 </div>
-            </div>
-        </div>
-
-    </div>
-    {% endif %}
-
-    {% else %}
-
-    <div class="row justify-content-center mt-5">
-        <div class="col-12 col-md-6 text-center">
-            <i class="bi bi-calendar2-week display-1 text-primary mb-3 d-block"></i>
-            <h2 class="fw-bold mb-3">Agenda Escolar</h2>
-            <p class="lead text-muted mb-4">
-                Sistema de acompanhamento de eventos escolares com notificações automáticas.
-            </p>
-            <a href="{% url 'login' %}" class="btn btn-primary btn-lg px-5">
-                <i class="bi bi-box-arrow-in-right me-2"></i>Entrar
             </a>
         </div>
     </div>
 
-    {% endif %}
+    {# ── Painéis: hoje | semana | pendentes ───────────────────────────── #}
+    <div class="row g-3">
+
+        {# Aulas de hoje #}
+        <div class="col-12 col-lg-4">
+            <div class="card panel-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="panel-title mb-0"><i class="bi bi-sun me-1"></i>Aulas de hoje</h6>
+                        <a href="{% url 'cal:aula_list' %}" class="small text-decoration-none">Ver todas →</a>
+                    </div>
+                    {% for aula in aulas_hoje %}
+                        <a href="{% url 'cal:aula_update' aula.pk %}" class="list-row text-decoration-none text-reset d-block">
+                            <div class="d-flex justify-content-between gap-2">
+                                <div class="text-truncate">
+                                    <span class="badge bg-info text-dark">{{ aula.materia }}</span>
+                                    <span class="fw-semibold ms-1">{{ aula.turma.nome_turma }}</span>
+                                </div>
+                                <span class="meta text-muted text-nowrap">{{ aula.turma.escola.nome_escola|truncatechars:18 }}</span>
+                            </div>
+                            {% if aula.conteudo %}
+                            <div class="meta text-muted text-truncate mt-1">{{ aula.conteudo|truncatechars:65 }}</div>
+                            {% endif %}
+                        </a>
+                    {% empty %}
+                        <div class="empty-state">
+                            <i class="bi bi-cup-hot fs-3 d-block mb-2"></i>
+                            Nenhuma aula registrada hoje.
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {# Deveres da semana #}
+        <div class="col-12 col-lg-4">
+            <div class="card panel-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="panel-title mb-0"><i class="bi bi-calendar-week me-1"></i>Deveres na semana</h6>
+                        <a href="{% url 'cal:aula_list' %}" class="small text-decoration-none">Ver todas →</a>
+                    </div>
+                    {% for aula in deveres_proximos %}
+                        <a href="{% url 'cal:aula_update' aula.pk %}" class="list-row text-decoration-none text-reset d-block">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <div class="text-truncate">
+                                    <span class="badge bg-warning text-dark">{{ aula.materia }}</span>
+                                    <span class="fw-semibold ms-1">{{ aula.turma.nome_turma }}</span>
+                                </div>
+                                {% with dias=aula.dias_para_entrega %}
+                                <span class="badge bg-{% if dias <= 1 %}danger{% elif dias <= 3 %}warning text-dark{% else %}success{% endif %} text-nowrap">
+                                    {% if dias == 0 %}Hoje{% elif dias == 1 %}Amanhã{% else %}{{ dias }} d{% endif %}
+                                </span>
+                                {% endwith %}
+                            </div>
+                            <div class="meta text-muted text-truncate mt-1">
+                                {{ aula.dever|truncatechars:65|default:"Sem descrição" }}
+                            </div>
+                        </a>
+                    {% empty %}
+                        <div class="empty-state">
+                            <i class="bi bi-emoji-smile fs-3 d-block mb-2"></i>
+                            Nenhum dever para os próximos 7 dias.
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {# Chamadas pendentes #}
+        <div class="col-12 col-lg-4">
+            <div class="card panel-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="panel-title mb-0"><i class="bi bi-person-x me-1"></i>Chamadas pendentes</h6>
+                        <a href="{% url 'cal:diario_list' %}" class="small text-decoration-none">Ver todas →</a>
+                    </div>
+                    {% for aula in pendentes_chamada %}
+                        <a href="{% url 'cal:diario_chamada' aula.pk %}" class="list-row text-decoration-none text-reset d-block">
+                            <div class="d-flex justify-content-between gap-2">
+                                <div class="text-truncate">
+                                    <span class="badge bg-secondary">{{ aula.data_aula|date:"d/m" }}</span>
+                                    <span class="fw-semibold ms-1">{{ aula.turma.nome_turma }}</span>
+                                </div>
+                                <span class="badge bg-danger text-nowrap">
+                                    <i class="bi bi-exclamation-triangle"></i> Pendente
+                                </span>
+                            </div>
+                            <div class="meta text-muted text-truncate mt-1">
+                                {{ aula.materia }} · {{ aula.turma.escola.nome_escola|truncatechars:25 }}
+                            </div>
+                        </a>
+                    {% empty %}
+                        <div class="empty-state">
+                            <i class="bi bi-check2-circle fs-3 d-block mb-2 text-success"></i>
+                            Tudo em dia! Nenhuma chamada pendente.
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+    </div>
 
 </div>
 {% endblock %}

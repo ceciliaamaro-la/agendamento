@@ -4,19 +4,36 @@ from datetime import date
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import F
+from django.db.models import Count, Q, DateField
 from django.db.models.functions import Coalesce, Cast
-from django.db.models import DateField
+from django.http import HttpResponseForbidden
 
-from ..models import Aula, Escola, Turma, DiarioAluno, Aluno
+from ..models import Aula, Turma, DiarioAluno, Aluno
 from ..forms import AulaForm, DiarioAlunoFormSet
 from ..services.aula_evento_sync import sincronizar_evento_da_aula
+from ..services.escopo import (
+    aulas_do_usuario,
+    pode_editar_aula,
+    is_admin,
+    professor_do_usuario,
+    turmas_do_usuario,
+)
+
+
+def _aula_ou_403(request, pk):
+    """Busca a aula respeitando o escopo do usuário; 403 se não autorizado."""
+    aula = get_object_or_404(Aula, pk=pk)
+    if not pode_editar_aula(request.user, aula):
+        return None, HttpResponseForbidden(
+            "Você não tem permissão para acessar esta aula."
+        )
+    return aula, None
 
 
 @login_required
 def aula_list(request):
     turma_id = request.GET.get("turma")
-    qs = Aula.objects.select_related(
+    qs = aulas_do_usuario(request.user).select_related(
         "escola", "turma", "professor", "materia"
     ).annotate(
         data_ordem=Coalesce("data_entrega", Cast("criado_em", output_field=DateField()))
@@ -27,7 +44,6 @@ def aula_list(request):
 
     # Agrupa: escola → turma → [aulas]
     agrupado = defaultdict(lambda: defaultdict(list))
-    hoje = date.today()
     for aula in qs:
         dias = aula.dias_para_entrega()
         if dias is not None:
@@ -39,13 +55,16 @@ def aula_list(request):
     def to_dict(d):
         return {k: to_dict(v) for k, v in d.items()} if isinstance(d, defaultdict) else d
 
-    turmas = Turma.objects.select_related("escola").order_by("escola__nome_escola", "nome_turma")
+    turmas = turmas_do_usuario(request.user).select_related("escola").order_by(
+        "escola__nome_escola", "nome_turma"
+    )
     return render(request, "diario/aula/list.html", {
         "agrupado": to_dict(agrupado),
         "tem_aulas": qs.exists(),
         "turmas": turmas,
         "turma_filtro": turma_id,
-        "hoje": hoje,
+        "hoje": date.today(),
+        "is_admin": is_admin(request.user),
     })
 
 
@@ -57,7 +76,13 @@ def aula_create(request):
         initial["turma"] = ultima_turma
     form = AulaForm(request.POST or None, user=request.user, initial=initial)
     if form.is_valid():
-        aula = form.save()
+        aula = form.save(commit=False)
+        # Garante que professor não-admin não burle o "disabled" via POST
+        if not is_admin(request.user):
+            prof = professor_do_usuario(request.user)
+            if prof is not None:
+                aula.professor = prof
+        aula.save()
         request.session["ultima_turma_id"] = aula.turma_id
         sincronizar_evento_da_aula(aula)
         messages.success(request, "Aula cadastrada e publicada na agenda. Faça a chamada agora.")
@@ -67,10 +92,17 @@ def aula_create(request):
 
 @login_required
 def aula_update(request, pk):
-    aula = get_object_or_404(Aula, pk=pk)
+    aula, forbidden = _aula_ou_403(request, pk)
+    if forbidden:
+        return forbidden
     form = AulaForm(request.POST or None, instance=aula, user=request.user)
     if form.is_valid():
-        aula = form.save()
+        aula = form.save(commit=False)
+        if not is_admin(request.user):
+            prof = professor_do_usuario(request.user)
+            if prof is not None:
+                aula.professor = prof
+        aula.save()
         request.session["ultima_turma_id"] = aula.turma_id
         sincronizar_evento_da_aula(aula)
         messages.success(request, "Aula atualizada (e evento da agenda sincronizado).")
@@ -80,7 +112,9 @@ def aula_update(request, pk):
 
 @login_required
 def aula_delete(request, pk):
-    aula = get_object_or_404(Aula, pk=pk)
+    aula, forbidden = _aula_ou_403(request, pk)
+    if forbidden:
+        return forbidden
     if request.method == "POST":
         aula.delete()
         messages.success(request, "Aula excluída.")
@@ -94,12 +128,24 @@ def aula_delete(request, pk):
 
 @login_required
 def diario_chamada(request, pk):
-    aula = get_object_or_404(Aula, pk=pk)
-    alunos_turma = Aluno.objects.filter(turma=aula.turma).order_by("nome_aluno")
+    aula, forbidden = _aula_ou_403(request, pk)
+    if forbidden:
+        return forbidden
 
-    # Garante registro para cada aluno da turma
-    for aluno in alunos_turma:
-        DiarioAluno.objects.get_or_create(aula=aula, aluno=aluno)
+    alunos_turma = list(
+        Aluno.objects.filter(turma=aula.turma).order_by("nome_aluno")
+    )
+
+    # Bulk: cria registros faltantes em UMA query (em vez de N get_or_create)
+    existentes_ids = set(
+        DiarioAluno.objects.filter(aula=aula).values_list("aluno_id", flat=True)
+    )
+    faltando = [a for a in alunos_turma if a.id not in existentes_ids]
+    if faltando:
+        DiarioAluno.objects.bulk_create(
+            [DiarioAluno(aula=aula, aluno=a) for a in faltando],
+            ignore_conflicts=True,
+        )
 
     if request.method == "POST":
         formset = DiarioAlunoFormSet(request.POST, instance=aula)
@@ -111,9 +157,14 @@ def diario_chamada(request, pk):
     else:
         formset = DiarioAlunoFormSet(instance=aula)
 
+    # Mapeia em UMA query e monta os registros
+    diarios_map = {
+        d.aluno_id: d
+        for d in DiarioAluno.objects.filter(aula=aula).select_related("aluno")
+    }
     registros = list(zip(
         formset.forms,
-        [DiarioAluno.objects.get(aula=aula, aluno=a) for a in alunos_turma],
+        [diarios_map.get(a.id) for a in alunos_turma],
         alunos_turma,
     ))
 
@@ -127,8 +178,11 @@ def diario_chamada(request, pk):
 @login_required
 def diario_list(request):
     turma_id = request.GET.get("turma")
-    qs = Aula.objects.select_related(
+    qs = aulas_do_usuario(request.user).select_related(
         "turma", "turma__escola", "materia", "professor"
+    ).annotate(
+        total_alunos=Count("diario", distinct=True),
+        total_faltas=Count("diario", filter=Q(diario__presente=False), distinct=True),
     ).order_by("-data_aula", "-criado_em")
 
     if turma_id:
@@ -136,16 +190,14 @@ def diario_list(request):
 
     aulas_por_escola = defaultdict(lambda: defaultdict(list))
     for aula in qs:
-        total = DiarioAluno.objects.filter(aula=aula).count()
-        faltas = DiarioAluno.objects.filter(aula=aula, presente=False).count()
-        aula.total_alunos = total
-        aula.total_faltas = faltas
         aulas_por_escola[aula.turma.escola.nome_escola][aula.turma.nome_turma].append(aula)
 
     def to_dict(d):
         return {k: to_dict(v) for k, v in d.items()} if isinstance(d, defaultdict) else d
 
-    turmas = Turma.objects.select_related("escola").order_by("escola__nome_escola", "nome_turma")
+    turmas = turmas_do_usuario(request.user).select_related("escola").order_by(
+        "escola__nome_escola", "nome_turma"
+    )
     return render(request, "diario/chamada/list.html", {
         "aulas_por_escola": to_dict(aulas_por_escola),
         "tem_aulas": qs.exists(),
@@ -156,12 +208,24 @@ def diario_list(request):
 
 @login_required
 def diario_detail(request, pk):
-    aula = get_object_or_404(Aula, pk=pk)
-    registros = DiarioAluno.objects.filter(aula=aula).select_related("aluno").order_by("aluno__nome_aluno")
+    aula, forbidden = _aula_ou_403(request, pk)
+    if forbidden:
+        return forbidden
+    registros = (
+        DiarioAluno.objects.filter(aula=aula)
+        .select_related("aluno")
+        .order_by("aluno__nome_aluno")
+    )
+    # Conta presenças/ausências em UMA query (em vez de 3)
+    counts = registros.aggregate(
+        total=Count("id"),
+        presentes=Count("id", filter=Q(presente=True)),
+        ausentes=Count("id", filter=Q(presente=False)),
+    )
     return render(request, "diario/chamada/detail.html", {
         "aula": aula,
         "registros": registros,
-        "presentes": registros.filter(presente=True).count(),
-        "ausentes": registros.filter(presente=False).count(),
-        "total": registros.count(),
+        "presentes": counts["presentes"],
+        "ausentes": counts["ausentes"],
+        "total": counts["total"],
     })

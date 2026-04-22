@@ -67,7 +67,11 @@ def editar_usuario(request, user_id):
 @login_required
 @staff_member_required
 def listar_usuarios(request):
-    usuarios = User.objects.all().order_by('username')
+    usuarios = (
+        User.objects
+        .select_related('perfil', 'perfil__escola', 'perfil__professor_vinculado')
+        .order_by('username')
+    )
     return render(request, 'user/listar.html', {'usuarios': usuarios})
 
 
@@ -128,8 +132,67 @@ def desativar_usuario(request, user_id):
     return redirect('cal:listar_usuarios')
 
 
+@login_required
 def home(request):
-    return render(request, 'home.html', {})
+    from datetime import date, timedelta
+    from django.db.models import Count
+    from ..models import Aula, AgendaEvento
+    from ..services.escopo import (
+        is_admin, professor_do_usuario, aulas_do_usuario,
+    )
+
+    user = request.user
+    hoje = date.today()
+    fim_semana = hoje + timedelta(days=7)
+    admin = is_admin(user)
+    professor = professor_do_usuario(user)
+
+    aulas_qs = aulas_do_usuario(user)
+
+    aulas_hoje = list(
+        aulas_qs.filter(data_aula=hoje)
+        .select_related("turma", "turma__escola", "materia")
+        .order_by("turma__nome_turma")[:6]
+    )
+
+    deveres_proximos = list(
+        aulas_qs.filter(
+            data_entrega__isnull=False,
+            data_entrega__gte=hoje,
+            data_entrega__lte=fim_semana,
+        )
+        .select_related("turma", "turma__escola", "materia")
+        .order_by("data_entrega")[:6]
+    )
+
+    # Aulas com data já passada (ou hoje) sem nenhum registro de chamada
+    pendentes_chamada = list(
+        aulas_qs.filter(data_aula__lte=hoje)
+        .annotate(_n=Count("diario"))
+        .filter(_n=0)
+        .select_related("turma", "turma__escola", "materia")
+        .order_by("-data_aula")[:6]
+    )
+
+    # Estatísticas para os cards
+    stats = {
+        "aulas_hoje":       len(aulas_hoje),
+        "deveres_semana":   len(deveres_proximos),
+        "chamadas_pendentes": len(pendentes_chamada),
+    }
+    if admin:
+        stats["total_eventos"] = AgendaEvento.objects.count()
+        stats["total_aulas"]   = Aula.objects.count()
+
+    return render(request, 'home.html', {
+        "is_admin": admin,
+        "professor": professor,
+        "aulas_hoje": aulas_hoje,
+        "deveres_proximos": deveres_proximos,
+        "pendentes_chamada": pendentes_chamada,
+        "stats": stats,
+        "hoje": hoje,
+    })
 
 
 def contato(request):

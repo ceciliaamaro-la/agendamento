@@ -16,9 +16,9 @@ def _gerar_hash_manual(evento) -> str:
 @login_required
 def agenda_list(request):
     # Order by inicio when available, fall back to legacy data field.
-    agendas = AgendaEvento.objects.select_related('turma').order_by(
-        '-inicio', '-data'
-    )
+    agendas = AgendaEvento.objects.select_related(
+        'turma', 'turma__escola', 'escola', 'professor', 'materia'
+    ).order_by('-inicio', '-data')
     return render(request, 'agenda/list.html', {'agendas': agendas})
 
 @login_required
