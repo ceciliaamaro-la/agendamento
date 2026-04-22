@@ -1,9 +1,17 @@
+import hashlib
+import secrets
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils.formats import get_format
 from ..models import AgendaEvento
 from ..forms import AgendaEventoForm
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+
+
+def _gerar_hash_manual(evento) -> str:
+    base = f"manual-{evento.pk or secrets.token_hex(8)}-{evento.titulo}-{evento.inicio}"
+    return hashlib.sha256(base.encode("utf-8")).hexdigest()
 
 @login_required
 def agenda_list(request):
@@ -18,7 +26,10 @@ def agenda_create(request):
     if request.method == 'POST':
         form = AgendaEventoForm(request.POST)
         if form.is_valid():
-            form.save()
+            evento = form.save(commit=False)
+            if not evento.hash:
+                evento.hash = _gerar_hash_manual(evento)
+            evento.save()
             messages.success(request, 'Evento criado com sucesso!')
             return redirect('cal:agenda_list')
     else:
@@ -31,7 +42,10 @@ def agenda_update(request, pk):
     if request.method == 'POST':
         form = AgendaEventoForm(request.POST, instance=agenda)
         if form.is_valid():
-            form.save()
+            evento = form.save(commit=False)
+            if not evento.hash:
+                evento.hash = _gerar_hash_manual(evento)
+            evento.save()
             messages.success(request, 'Evento atualizado com sucesso!')
             return redirect('cal:agenda_list')
     else:

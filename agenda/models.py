@@ -120,6 +120,34 @@ class AgendaEvento(models.Model):
 
     enviado_whatsapp = models.BooleanField(default=False)
 
+    # ── Campos pedagógicos (opcionais) — unificação com /aulas/nova/ ──
+    escola = models.ForeignKey(
+        "Escola", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="eventos",
+    )
+    professor = models.ForeignKey(
+        "Professor", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="eventos",
+    )
+    materia = models.ForeignKey(
+        "Materia", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="eventos",
+    )
+    livro = models.ForeignKey(
+        "Livro", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="eventos",
+    )
+    conteudo = models.TextField(blank=True, verbose_name="Conteúdo ministrado")
+    dever = models.TextField(blank=True, verbose_name="Dever de casa")
+    data_entrega = models.DateField(null=True, blank=True, verbose_name="Data de entrega")
+    observacao = models.TextField(blank=True, verbose_name="Observação geral")
+
+    # Espelho da Aula registrada em /aulas/nova/ (quando o evento foi gerado pelo diário)
+    aula = models.OneToOneField(
+        "Aula", on_delete=models.CASCADE, null=True, blank=True,
+        related_name="evento_espelho",
+    )
+
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:

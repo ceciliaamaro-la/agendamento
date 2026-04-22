@@ -1,10 +1,11 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}{{ titulo }}{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
   <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-lg-10">
       <div class="card shadow-sm">
         <div class="card-header bg-primary text-white">
           <h5 class="mb-0"><i class="bi bi-calendar-event"></i> {{ titulo }}</h5>
@@ -12,28 +13,27 @@
         <div class="card-body">
           <form method="post">
             {% csrf_token %}
-            {% for field in form %}
-              <div class="mb-3 {% if field.field.widget.input_type == 'checkbox' %}form-check{% endif %}">
+            <div class="row g-3">
+              {% for field in form %}
                 {% if field.field.widget.input_type == 'checkbox' %}
-                  {{ field }}
-                  <label class="form-check-label fw-semibold" for="{{ field.id_for_label }}">
-                    {{ field.label }}
-                  </label>
+                  <div class="col-md-6">
+                    <div class="form-check mt-4">
+                      {{ field }}
+                      <label class="form-check-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    </div>
+                    {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|join:", " }}</div>{% endif %}
+                  </div>
                 {% else %}
-                  <label class="form-label fw-semibold" for="{{ field.id_for_label }}">
-                    {{ field.label }}
-                  </label>
-                  {{ field }}
+                  <div class="{% if field.name in 'descricao,conteudo,dever,observacao' %}col-12{% else %}col-md-6{% endif %}">
+                    <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}<div class="form-text text-muted">{{ field.help_text }}</div>{% endif %}
+                    {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|join:", " }}</div>{% endif %}
+                  </div>
                 {% endif %}
-                {% if field.help_text %}
-                  <div class="form-text text-muted">{{ field.help_text }}</div>
-                {% endif %}
-                {% if field.errors %}
-                  <div class="text-danger small mt-1">{{ field.errors }}</div>
-                {% endif %}
-              </div>
-            {% endfor %}
-            <div class="d-flex gap-2 mt-3">
+              {% endfor %}
+            </div>
+            <div class="d-flex gap-2 mt-4">
               <button type="submit" class="btn btn-success">
                 <i class="bi bi-check-circle"></i> Salvar
               </button>
@@ -47,4 +47,13 @@
     </div>
   </div>
 </div>
+
+<script>
+  window.CASCADE_URLS = {
+    professor: "{% url 'cal:cascade_professor' 0 %}".replace('/0/', '/__pk__/'),
+    turma:     "{% url 'cal:cascade_turma' 0 %}".replace('/0/', '/__pk__/'),
+    materia:   "{% url 'cal:cascade_materia' 0 %}".replace('/0/', '/__pk__/'),
+  };
+</script>
+<script src="{% static 'js/cascade.js' %}"></script>
 {% endblock %}

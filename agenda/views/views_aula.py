@@ -10,6 +10,7 @@ from django.db.models import DateField
 
 from ..models import Aula, Escola, Turma, DiarioAluno, Aluno
 from ..forms import AulaForm, DiarioAlunoFormSet
+from ..services.aula_evento_sync import sincronizar_evento_da_aula
 
 
 @login_required
@@ -53,7 +54,8 @@ def aula_create(request):
     form = AulaForm(request.POST or None)
     if form.is_valid():
         aula = form.save()
-        messages.success(request, "Aula cadastrada. Faça a chamada agora.")
+        sincronizar_evento_da_aula(aula)
+        messages.success(request, "Aula cadastrada e publicada na agenda. Faça a chamada agora.")
         return redirect("cal:diario_chamada", pk=aula.pk)
     return render(request, "diario/aula/form.html", {"form": form, "titulo": "Nova Aula / Dever"})
 
@@ -63,8 +65,9 @@ def aula_update(request, pk):
     aula = get_object_or_404(Aula, pk=pk)
     form = AulaForm(request.POST or None, instance=aula)
     if form.is_valid():
-        form.save()
-        messages.success(request, "Aula atualizada.")
+        aula = form.save()
+        sincronizar_evento_da_aula(aula)
+        messages.success(request, "Aula atualizada (e evento da agenda sincronizado).")
         return redirect("cal:aula_list")
     return render(request, "diario/aula/form.html", {"form": form, "titulo": "Editar Aula"})
 

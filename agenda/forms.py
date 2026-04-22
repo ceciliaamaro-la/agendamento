@@ -254,34 +254,56 @@ class ConexaoAgendaForm(forms.ModelForm):
 # ===============================
 
 class AgendaEventoForm(forms.ModelForm):
+    """Formulário unificado: evento de calendário + campos pedagógicos opcionais."""
 
     class Meta:
         model = AgendaEvento
         fields = [
-            "turma", "titulo", "descricao", "tipo",
-            "inicio", "termino", "tem_anexo",
-            "enviado_whatsapp",
+            # Pedagógicos (em cascata)
+            "escola", "turma", "professor", "materia", "livro",
+            # Conteúdo do evento
+            "titulo", "tipo", "descricao",
+            "conteudo", "dever", "observacao",
+            # Datas
+            "inicio", "termino", "data_entrega",
+            # Flags
+            "tem_anexo", "enviado_whatsapp",
         ]
         widgets = {
-            "turma": forms.Select(
-                attrs={"class": "form-select shadow-sm border-dark", "style": "border-radius:10px;"}
-            ),
+            "escola":    forms.Select(attrs={"class": "form-select shadow-sm", "data-cascade": "escola"}),
+            "turma":     forms.Select(attrs={"class": "form-select shadow-sm", "data-cascade": "turma"}),
+            "professor": forms.Select(attrs={"class": "form-select shadow-sm", "data-cascade": "professor"}),
+            "materia":   forms.Select(attrs={"class": "form-select shadow-sm", "data-cascade": "materia"}),
+            "livro":     forms.Select(attrs={"class": "form-select shadow-sm", "data-cascade": "livro"}),
             "titulo": forms.TextInput(
-                attrs={"class": "form-control shadow-sm border-dark", "placeholder": "Título do evento", "style": "border-radius:10px;"}
-            ),
-            "descricao": forms.Textarea(
-                attrs={"class": "form-control shadow-sm border-dark", "rows": 4, "placeholder": "Descrição completa", "style": "border-radius:10px;"}
+                attrs={"class": "form-control shadow-sm", "placeholder": "Título do evento"}
             ),
             "tipo": forms.TextInput(
-                attrs={"class": "form-control shadow-sm border-dark", "placeholder": "Ex: Tarefa, Prova, Avaliação", "style": "border-radius:10px;"}
+                attrs={"class": "form-control shadow-sm", "placeholder": "Ex: Tarefa, Prova, Avaliação"}
+            ),
+            "descricao": forms.Textarea(
+                attrs={"class": "form-control shadow-sm", "rows": 3, "placeholder": "Descrição completa"}
+            ),
+            "conteudo": forms.Textarea(
+                attrs={"class": "form-control shadow-sm", "rows": 2, "placeholder": "Conteúdo ministrado (opcional)"}
+            ),
+            "dever": forms.Textarea(
+                attrs={"class": "form-control shadow-sm", "rows": 2, "placeholder": "Dever de casa (opcional)"}
+            ),
+            "observacao": forms.Textarea(
+                attrs={"class": "form-control shadow-sm", "rows": 2, "placeholder": "Observação geral (opcional)"}
             ),
             "inicio": forms.DateTimeInput(
-                attrs={"class": "form-control shadow-sm border-dark", "type": "datetime-local", "style": "border-radius:10px;"},
+                attrs={"class": "form-control shadow-sm", "type": "datetime-local"},
                 format="%Y-%m-%dT%H:%M",
             ),
             "termino": forms.DateTimeInput(
-                attrs={"class": "form-control shadow-sm border-dark", "type": "datetime-local", "style": "border-radius:10px;"},
+                attrs={"class": "form-control shadow-sm", "type": "datetime-local"},
                 format="%Y-%m-%dT%H:%M",
+            ),
+            "data_entrega": forms.DateInput(
+                attrs={"class": "form-control shadow-sm", "type": "date"},
+                format="%Y-%m-%d",
             ),
             "tem_anexo": forms.CheckboxInput(
                 attrs={"class": "form-check-input", "style": "transform: scale(1.3);"}
@@ -291,15 +313,26 @@ class AgendaEventoForm(forms.ModelForm):
             ),
         }
         labels = {
-            "turma": "Turma",
-            "titulo": "Título",
-            "descricao": "Descrição",
-            "tipo": "Tipo",
-            "inicio": "Início",
-            "termino": "Término",
-            "tem_anexo": "Possui anexo",
-            "enviado_whatsapp": "Enviado via WhatsApp",
+            "escola": "Escola", "turma": "Turma", "professor": "Professor",
+            "materia": "Matéria", "livro": "Livro",
+            "titulo": "Título", "descricao": "Descrição", "tipo": "Tipo",
+            "conteudo": "Conteúdo ministrado", "dever": "Dever de casa",
+            "observacao": "Observação geral",
+            "inicio": "Início", "termino": "Término", "data_entrega": "Data de entrega",
+            "tem_anexo": "Possui anexo", "enviado_whatsapp": "Enviado via WhatsApp",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ("escola", "professor", "materia", "livro",
+                     "conteudo", "dever", "observacao", "data_entrega",
+                     "descricao", "tipo", "tem_anexo", "enviado_whatsapp",
+                     "termino"):
+            if name in self.fields:
+                self.fields[name].required = False
+        self.fields["inicio"].input_formats = ["%Y-%m-%dT%H:%M"]
+        self.fields["termino"].input_formats = ["%Y-%m-%dT%H:%M"]
+        self.fields["data_entrega"].input_formats = ["%Y-%m-%d"]
 
 
 # ===============================

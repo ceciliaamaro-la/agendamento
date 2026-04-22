@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}{{ titulo }}{% endblock %}
 {% block content %}
-<div class="container mt-4" style="max-width:680px">
+<div class="container mt-4" style="max-width:880px">
   <div class="d-flex align-items-center mb-3 gap-2">
     <a href="{% url 'cal:aula_list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
     <h4 class="mb-0 fw-bold"><i class="bi bi-journal-text text-primary me-1"></i>{{ titulo }}</h4>
@@ -29,4 +30,22 @@
     </div>
   </div>
 </div>
+
+<script>
+  // Marca os selects do AulaForm com data-cascade para o JS reaproveitável
+  (function () {
+    var map = { id_escola: 'escola', id_turma: 'turma', id_professor: 'professor',
+                id_materia: 'materia', id_livro: 'livro' };
+    Object.keys(map).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.setAttribute('data-cascade', map[id]);
+    });
+  })();
+  window.CASCADE_URLS = {
+    professor: "{% url 'cal:cascade_professor' 0 %}".replace('/0/', '/__pk__/'),
+    turma:     "{% url 'cal:cascade_turma' 0 %}".replace('/0/', '/__pk__/'),
+    materia:   "{% url 'cal:cascade_materia' 0 %}".replace('/0/', '/__pk__/'),
+  };
+</script>
+<script src="{% static 'js/cascade.js' %}"></script>
 {% endblock %}

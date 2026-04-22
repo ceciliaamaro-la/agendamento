@@ -15,6 +15,7 @@ from .views import views_livro
 from .views import views_horario
 from .views import views_aula
 from .views import views_ordem_horario
+from .views import views_cascade
 
 app_name = 'cal'
 
@@ -122,4 +123,9 @@ urlpatterns = [
     path('diario/', views_aula.diario_list, name='diario_list'),
     path('diario/aula/<int:pk>/chamada/', views_aula.diario_chamada, name='diario_chamada'),
     path('diario/aula/<int:pk>/detalhe/', views_aula.diario_detail, name='diario_detail'),
+
+    # ─── Cascata AJAX (autopreenchimento de selects) ──────────────────────────
+    path('api/cascade/professor/<int:pk>/', views_cascade.cascade_professor, name='cascade_professor'),
+    path('api/cascade/turma/<int:pk>/',     views_cascade.cascade_turma,     name='cascade_turma'),
+    path('api/cascade/materia/<int:pk>/',   views_cascade.cascade_materia,   name='cascade_materia'),
 ]
