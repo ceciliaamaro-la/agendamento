@@ -99,13 +99,14 @@ def horario_pdf(request):
     # Agrupa por (escola, turma) → dict[(ordem_id, dia_id)] = horario
     grupos = defaultdict(dict)
     turmas_meta = {}
+    ordens_usadas = defaultdict(dict)  # key -> {ordem_id: ordem_obj}
     for h in qs:
         key = (h.turma.escola_id, h.turma_id)
         grupos[key][(h.ordem_id, h.dia_id)] = h
         turmas_meta[key] = (h.turma.escola.nome_escola, h.turma.nome_turma)
+        ordens_usadas[key][h.ordem_id] = h.ordem
 
     dias = list(Dias.objects.order_by("ordem"))
-    ordens = list(OrdemHorario.objects.order_by("id"))
 
     buf = BytesIO()
     doc = SimpleDocTemplate(
@@ -128,6 +129,9 @@ def horario_pdf(request):
         escola_nome, turma_nome = turmas_meta[key]
         story.append(Paragraph(f"🏫 {escola_nome}", h_style))
         story.append(Paragraph(f"Turma: <b>{turma_nome}</b>", sub_style))
+
+        # Apenas ordens realmente registradas para esta turma
+        ordens = sorted(ordens_usadas[key].values(), key=lambda o: o.id)
 
         # Cabeçalho: vazio + dias
         header = [Paragraph("<b>Horário</b>", head_style)] + [
