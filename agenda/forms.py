@@ -439,13 +439,20 @@ class HorarioForm(forms.ModelForm):
         model = Horario
         fields = ["escola", "turma", "dia", "ordem", "professor", "materia"]
         widgets = {
-            "escola":    forms.Select(attrs={"class": "form-select"}),
-            "turma":     forms.Select(attrs={"class": "form-select"}),
+            "escola":    forms.Select(attrs={"class": "form-select", "data-cascade": "escola"}),
+            "turma":     forms.Select(attrs={"class": "form-select", "data-cascade": "turma"}),
             "dia":       forms.Select(attrs={"class": "form-select"}),
             "ordem":     forms.Select(attrs={"class": "form-select"}),
-            "professor": forms.Select(attrs={"class": "form-select"}),
-            "materia":   forms.Select(attrs={"class": "form-select"}),
+            "professor": forms.Select(attrs={"class": "form-select", "data-cascade": "professor"}),
+            "materia":   forms.Select(attrs={"class": "form-select", "data-cascade": "materia"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        if user is not None:
+            from .services.escopo import aplicar_escopo_no_form
+            aplicar_escopo_no_form(self, user)
 
 
 # ===============================

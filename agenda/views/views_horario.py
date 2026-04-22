@@ -35,7 +35,7 @@ def horario_list(request):
 
 @login_required
 def horario_create(request):
-    form = HorarioForm(request.POST or None)
+    form = HorarioForm(request.POST or None, user=request.user)
     if form.is_valid():
         form.save()
         messages.success(request, "Horário cadastrado.")
@@ -46,7 +46,7 @@ def horario_create(request):
 @login_required
 def horario_update(request, pk):
     horario = get_object_or_404(Horario, pk=pk)
-    form = HorarioForm(request.POST or None, instance=horario)
+    form = HorarioForm(request.POST or None, instance=horario, user=request.user)
     if form.is_valid():
         form.save()
         messages.success(request, "Horário atualizado.")
