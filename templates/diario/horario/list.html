@@ -30,41 +30,47 @@
   </form>
 
   {% if tem_horarios %}
-    {% for escola, turmas_dict in agrupado.items %}
-    <div class="card mb-4 shadow-sm">
-      <div class="card-header bg-dark text-white fw-bold">
-        <i class="bi bi-building me-1"></i>{{ escola }}
-      </div>
-      <div class="card-body p-0">
-        {% for turma, dias_dict in turmas_dict.items %}
-        <div class="px-3 pt-3 pb-1">
-          <h6 class="fw-bold text-secondary"><i class="bi bi-people-fill me-1"></i>{{ turma }}</h6>
-        </div>
+    {% for escola_nome, turmas_list in escolas.items %}
+    <div class="mb-4">
+      <h5 class="fw-bold text-primary mb-1">
+        <i class="bi bi-building-fill me-1"></i>{{ escola_nome }}
+      </h5>
+      {% for turma in turmas_list %}
+      <div class="mb-3">
+        <div class="text-secondary small fw-semibold mb-1"><em>Turma: {{ turma.nome }}</em></div>
         <div class="table-responsive">
-          <table class="table table-sm table-hover align-middle mb-3">
-            <thead class="table-light">
-              <tr><th>Dia</th><th>Ordem</th><th>Professor</th><th>Matéria</th><th class="text-center" style="width:100px">Ações</th></tr>
+          <table class="table table-bordered table-sm align-middle mb-0 horario-grid">
+            <thead>
+              <tr class="text-center">
+                <th class="bg-light" style="width:90px">Horário</th>
+                {% for d in turma.dias %}<th class="bg-light">{{ d.dias }}</th>{% endfor %}
+              </tr>
             </thead>
             <tbody>
-              {% for dia, horarios in dias_dict.items %}
-                {% for h in horarios %}
-                <tr>
-                  <td>{{ h.dia }}</td>
-                  <td>{{ h.ordem }}</td>
-                  <td>{{ h.professor }}</td>
-                  <td><span class="badge bg-info text-dark">{{ h.materia }}</span></td>
-                  <td class="text-center text-nowrap">
-                    <a href="{% url 'cal:horario_update' h.pk %}" class="btn btn-sm btn-warning me-1"><i class="bi bi-pencil"></i></a>
-                    <a href="{% url 'cal:horario_delete' h.pk %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
-                  </td>
-                </tr>
+              {% for linha in turma.linhas %}
+              <tr>
+                <th class="bg-light text-center">{{ linha.ordem.ordem }}</th>
+                {% for h in linha.celulas %}
+                  {% if h %}
+                    <td class="text-center">
+                      <div class="fw-bold text-dark">{{ h.materia }}</div>
+                      <div class="small text-primary">{{ h.professor }}</div>
+                      <div class="mt-1">
+                        <a href="{% url 'cal:horario_update' h.pk %}" class="btn btn-link btn-sm p-0 me-2" title="Editar"><i class="bi bi-pencil"></i></a>
+                        <a href="{% url 'cal:horario_delete' h.pk %}" class="btn btn-link btn-sm p-0 text-danger" title="Excluir"><i class="bi bi-trash"></i></a>
+                      </div>
+                    </td>
+                  {% else %}
+                    <td class="text-center text-muted">—</td>
+                  {% endif %}
                 {% endfor %}
+              </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-        {% endfor %}
       </div>
+      {% endfor %}
     </div>
     {% endfor %}
   {% else %}
@@ -73,4 +79,9 @@
     </div>
   {% endif %}
 </div>
+<style>
+  .horario-grid th { font-weight: 600; }
+  .horario-grid td { vertical-align: middle; min-width: 110px; }
+  .horario-grid tbody th { background: #f0f3f8 !important; }
+</style>
 {% endblock %}

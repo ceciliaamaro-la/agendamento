@@ -13,22 +13,44 @@ def horario_list(request):
     turma_id = request.GET.get("turma")
     qs = Horario.objects.select_related(
         "escola", "turma", "turma__escola", "dia", "ordem", "professor", "materia"
-    ).order_by("turma__escola__nome_escola", "turma__nome_turma", "dia__ordem", "ordem")
-
+    )
     if turma_id:
         qs = qs.filter(turma_id=turma_id)
+    qs = qs.order_by("turma__escola__nome_escola", "turma__nome_turma", "dia__ordem", "ordem__id")
 
-    # Agrupa: escola → turma → dia → [horários]
-    agrupado = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    dias_all = list(Dias.objects.order_by("ordem"))
+
+    # Agrupa: escola → [turmas]; turma → grid (ordens reais x dias) usados
+    grupos_tmp = defaultdict(dict)  # (escola_id, turma_id) -> celulas {(ordem_id, dia_id): h}
+    meta = {}
+    ordens_por_turma = defaultdict(dict)  # mantém ordem de inserção por id
     for h in qs:
-        agrupado[h.escola.nome_escola][h.turma.nome_turma][h.dia.dias].append(h)
+        key = (h.turma.escola_id, h.turma_id)
+        grupos_tmp[key][(h.ordem_id, h.dia_id)] = h
+        meta[key] = (h.turma.escola.nome_escola, h.turma.nome_turma)
+        ordens_por_turma[key][h.ordem_id] = h.ordem
 
-    def to_dict(d):
-        return {k: to_dict(v) for k, v in d.items()} if isinstance(d, defaultdict) else d
+    # Monta estrutura: escola -> [turmas com grid]
+    escolas = defaultdict(list)
+    for key, celulas in grupos_tmp.items():
+        escola_nome, turma_nome = meta[key]
+        ordens = list(ordens_por_turma[key].values())
+        ordens.sort(key=lambda o: o.id)
+        linhas = []
+        for o in ordens:
+            linhas.append({
+                "ordem": o,
+                "celulas": [celulas.get((o.id, d.id)) for d in dias_all],
+            })
+        escolas[escola_nome].append({
+            "nome": turma_nome,
+            "dias": dias_all,
+            "linhas": linhas,
+        })
 
     turmas = Turma.objects.select_related("escola").order_by("escola__nome_escola", "nome_turma")
     return render(request, "diario/horario/list.html", {
-        "agrupado": to_dict(agrupado),
+        "escolas": dict(escolas),
         "tem_horarios": qs.exists(),
         "turmas": turmas,
         "turma_filtro": turma_id,
