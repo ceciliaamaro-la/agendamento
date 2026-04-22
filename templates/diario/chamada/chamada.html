@@ -37,7 +37,10 @@
           <tbody>
             {% for subform, registro, aluno in registros %}
             <tr>
-              <td class="fw-semibold">{{ aluno.nome_aluno }}</td>
+              <td class="fw-semibold">
+                {{ subform.id }}
+                {{ aluno.nome_aluno }}
+              </td>
               <td class="text-center">
                 {{ subform.aluno }}
                 {{ subform.presente }}
