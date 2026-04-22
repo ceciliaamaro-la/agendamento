@@ -143,7 +143,12 @@ def horario_pdf(request):
             for d in dias:
                 h = celulas.get((o.id, d.id))
                 if h:
-                    txt = f"<b>{h.materia}</b><br/><font size=7 color='#555'>{h.professor}</font>"
+                    if h.materia and h.professor:
+                        txt = f"<b>{h.materia}</b><br/><font size=7 color='#555'>{h.professor}</font>"
+                    elif h.materia:
+                        txt = f"<b>{h.materia}</b>"
+                    else:
+                        txt = f"<i><font color='#666'>{h.ordem}</font></i>"
                 else:
                     txt = "<font color='#bbb'>—</font>"
                 row.append(Paragraph(txt, cell_style))

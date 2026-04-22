@@ -282,10 +282,12 @@ class Horario(models.Model):
         OrdemHorario, on_delete=models.CASCADE, related_name="horarios"
     )
     professor = models.ForeignKey(
-        Professor, on_delete=models.CASCADE, related_name="horarios"
+        Professor, on_delete=models.CASCADE, related_name="horarios",
+        null=True, blank=True,
     )
     materia = models.ForeignKey(
-        Materia, on_delete=models.CASCADE, related_name="horarios"
+        Materia, on_delete=models.CASCADE, related_name="horarios",
+        null=True, blank=True,
     )
 
     class Meta:

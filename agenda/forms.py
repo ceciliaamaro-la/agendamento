@@ -450,6 +450,11 @@ class HorarioForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
+        # Professor e matéria são opcionais (intervalo, almoço, lanche, etc.)
+        self.fields["professor"].required = False
+        self.fields["materia"].required = False
+        self.fields["professor"].empty_label = "— (sem professor)"
+        self.fields["materia"].empty_label = "— (sem matéria)"
         if user is not None:
             from .services.escopo import aplicar_escopo_no_form
             aplicar_escopo_no_form(self, user)

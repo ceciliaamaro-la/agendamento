@@ -52,9 +52,10 @@
                 <th class="bg-light text-center">{{ linha.ordem.ordem }}</th>
                 {% for h in linha.celulas %}
                   {% if h %}
-                    <td class="text-center">
-                      <div class="fw-bold text-dark">{{ h.materia }}</div>
-                      <div class="small text-primary">{{ h.professor }}</div>
+                    <td class="text-center {% if not h.materia and not h.professor %}bg-light{% endif %}">
+                      {% if h.materia %}<div class="fw-bold text-dark">{{ h.materia }}</div>{% endif %}
+                      {% if h.professor %}<div class="small text-primary">{{ h.professor }}</div>
+                      {% elif not h.materia %}<div class="fw-semibold text-secondary fst-italic">{{ h.ordem }}</div>{% endif %}
                       <div class="mt-1">
                         <a href="{% url 'cal:horario_update' h.pk %}" class="btn btn-link btn-sm p-0 me-2" title="Editar"><i class="bi bi-pencil"></i></a>
                         <a href="{% url 'cal:horario_delete' h.pk %}" class="btn btn-link btn-sm p-0 text-danger" title="Excluir"><i class="bi bi-trash"></i></a>
