@@ -56,6 +56,16 @@
                 <th class="bg-light text-center">
                   <div>{{ linha.ordem.ordem }}</div>
                   {% if linha.ordem.faixa %}<div class="small text-muted fw-normal">{{ linha.ordem.faixa }}</div>{% endif %}
+                  {% if is_admin_escola %}
+                  <div class="mt-1 d-flex justify-content-center gap-1">
+                    {% if not forloop.first %}
+                      <a href="{% url 'cal:ordem_mover' linha.ordem.pk 'cima' %}" class="btn btn-link btn-sm p-0 text-secondary" title="Mover para cima"><i class="bi bi-arrow-up"></i></a>
+                    {% endif %}
+                    {% if not forloop.last %}
+                      <a href="{% url 'cal:ordem_mover' linha.ordem.pk 'baixo' %}" class="btn btn-link btn-sm p-0 text-secondary" title="Mover para baixo"><i class="bi bi-arrow-down"></i></a>
+                    {% endif %}
+                  </div>
+                  {% endif %}
                 </th>
                 {% for h in linha.celulas %}
                   {% if h %}
