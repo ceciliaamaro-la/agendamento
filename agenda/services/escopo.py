@@ -102,7 +102,7 @@ def alunos_do_consumidor(user):
 
 def turmas_do_aluno(user):
     """Turmas dos alunos vinculados ao usuário (aluno ou responsável)."""
-    return Turma.objects.filter(alunos__usuarios=user).distinct()
+    return Turma.objects.filter(aluno__usuarios=user).distinct()
 
 
 def turmas_do_professor(user):
