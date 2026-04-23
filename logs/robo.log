@@ -1894,3 +1894,23 @@ Not Found: /favicon.ico
 Not Found: /favicon.ico
 /home/runner/workspace/agenda/views/views_cascade.py changed, reloading.
 Watching for file changes with StatReloader
+Not Found: /favicon.ico
+Not Found: /favicon.ico
+Not Found: /.well-known/assetlinks.json
+Not Found: /.well-known/assetlinks.json
+OSError: write error
+OSError: write error
+Forbidden (CSRF token from POST incorrect.): /login/
+OSError: write error
+Forbidden: /diario/aula/5/chamada/
+Forbidden: /diario/aula/6/chamada/
+Forbidden: /diario/aula/7/chamada/
+OSError: write error
+✅ Aluno Aluno 181v — Matemática — 181V — concluida=True
+⬜ Aluno Aluno 181v — Matemática — 181V — concluida=False
+✅ Aluno Aluno 181v — Matemática — 181V — concluida=True
+⬜ Aluno Aluno 181v — Matemática — 181V — concluida=False
+OSError: write error
+OSError: write error
+OSError: write error
+OSError: write error
