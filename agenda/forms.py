@@ -56,41 +56,139 @@ class UserRegisterForm(forms.ModelForm):
 # ===============================
 
 class UsuarioForm(forms.ModelForm):
+    """Formulário completo de criação/edição de usuário (inclui Perfil).
 
+    Campos do User: username, email, first/last name, is_active, is_staff,
+    is_superuser e (opcionalmente) senha.
+    Campos do PerfilUsuario: papel, escola, escolas_extras, professor_vinculado.
+    """
+
+    # Senha (opcional na edição; obrigatória na criação)
     password = forms.CharField(
+        required=False,
         widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Senha"}),
         label="Senha",
+        help_text="Deixe em branco para manter a senha atual (na edição).",
     )
     confirmar_senha = forms.CharField(
+        required=False,
         widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Confirmar senha"}),
         label="Confirmar Senha",
     )
 
+    # Campos do PerfilUsuario
+    papel = forms.ChoiceField(
+        choices=[],  # populado em __init__ a partir de PerfilUsuario.PAPEL_CHOICES
+        widget=forms.Select(attrs={"class": "form-select"}),
+        label="Papel",
+    )
+    escola = forms.ModelChoiceField(
+        queryset=Escola.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select"}),
+        label="Escola padrão",
+        empty_label="— (nenhuma)",
+    )
+    escolas_extras = forms.ModelMultipleChoiceField(
+        queryset=Escola.objects.all(),
+        required=False,
+        widget=forms.SelectMultiple(attrs={"class": "form-select", "size": 4}),
+        label="Escolas extras",
+        help_text="Segure Ctrl (Cmd no Mac) para selecionar várias.",
+    )
+    professor_vinculado = forms.ModelChoiceField(
+        queryset=Professor.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select"}),
+        label="Professor vinculado",
+        empty_label="— (nenhum)",
+        help_text="Quando preenchido, formulários já vêm com este professor.",
+    )
+
     class Meta:
         model = User
-        fields = ["username", "email", "first_name", "last_name", "is_staff"]
+        fields = ["username", "email", "first_name", "last_name",
+                  "is_active", "is_staff", "is_superuser"]
         widgets = {
-            "username": forms.TextInput(attrs={"class": "form-control"}),
-            "email": forms.EmailInput(attrs={"class": "form-control"}),
-            "first_name": forms.TextInput(attrs={"class": "form-control"}),
-            "last_name": forms.TextInput(attrs={"class": "form-control"}),
-            "is_staff": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "username":     forms.TextInput(attrs={"class": "form-control"}),
+            "email":        forms.EmailInput(attrs={"class": "form-control"}),
+            "first_name":   forms.TextInput(attrs={"class": "form-control"}),
+            "last_name":    forms.TextInput(attrs={"class": "form-control"}),
+            "is_active":    forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "is_staff":     forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "is_superuser": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
+        labels = {
+            "is_active":    "Ativo",
+            "is_staff":     "Equipe (acesso ao Django Admin)",
+            "is_superuser": "Super-usuário do Django",
+        }
+
+    def __init__(self, *args, **kwargs):
+        # `request_user` permite filtrar escolas/professores pelo escopo de quem edita
+        self.request_user = kwargs.pop("request_user", None)
+        super().__init__(*args, **kwargs)
+
+        from .models import PerfilUsuario as _PU
+        self.fields["papel"].choices = _PU.PAPEL_CHOICES
+
+        # Se for edição, pré-popula os campos do perfil
+        if self.instance and self.instance.pk:
+            perfil = getattr(self.instance, "perfil", None)
+            if perfil:
+                self.fields["papel"].initial = perfil.papel
+                self.fields["escola"].initial = perfil.escola_id
+                self.fields["escolas_extras"].initial = perfil.escolas_extras.all()
+                self.fields["professor_vinculado"].initial = perfil.professor_vinculado_id
+
+        # Restringe escolas/professores ao escopo de quem está editando
+        if self.request_user is not None:
+            from .services.escopo import (
+                escolas_administradas, is_superadmin,
+            )
+            if not is_superadmin(self.request_user):
+                escolas = escolas_administradas(self.request_user)
+                self.fields["escola"].queryset = escolas
+                self.fields["escolas_extras"].queryset = escolas
+                self.fields["professor_vinculado"].queryset = (
+                    Professor.objects.filter(escola__in=escolas)
+                )
+                # Apenas super-admin define is_staff/is_superuser
+                for f in ("is_staff", "is_superuser"):
+                    self.fields[f].disabled = True
 
     def clean(self):
         dados = super().clean()
-        if dados.get("password") != dados.get("confirmar_senha"):
-            raise forms.ValidationError("As senhas não coincidem.")
+        senha = dados.get("password")
+        confirma = dados.get("confirmar_senha")
+        if senha or confirma:
+            if senha != confirma:
+                raise forms.ValidationError("As senhas não coincidem.")
+            if len(senha) < 4:
+                raise forms.ValidationError("A senha deve ter pelo menos 4 caracteres.")
+        elif not (self.instance and self.instance.pk):
+            # Criação: senha obrigatória
+            raise forms.ValidationError("Informe uma senha para o novo usuário.")
         return dados
 
     def save(self, commit=True):
+        from .models import PerfilUsuario as _PU
         user = super().save(commit=False)
-        user.set_password(self.cleaned_data["password"])
+        if self.cleaned_data.get("password"):
+            user.set_password(self.cleaned_data["password"])
         if commit:
             user.save()
+            # Cria/atualiza o PerfilUsuario
+            perfil, _ = _PU.objects.get_or_create(usuario=user)
+            perfil.papel = self.cleaned_data["papel"]
+            perfil.escola = self.cleaned_data.get("escola")
+            perfil.professor_vinculado = self.cleaned_data.get("professor_vinculado")
+            perfil.save()
+            perfil.escolas_extras.set(self.cleaned_data.get("escolas_extras") or [])
         return user
 
 
+# Mantido para compatibilidade com perfil_usuario (auto-edição de perfil próprio)
 class UsuarioUpdateForm(forms.ModelForm):
 
     class Meta:

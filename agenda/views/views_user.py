@@ -51,8 +51,16 @@ def editar_usuario(request, user_id):
         return redirect('cal:home')
 
     usuario = get_object_or_404(User, id=user_id)
+    # Auto-edição: usa form simples; admin/staff: usa form completo (User+Perfil)
+    if request.user.is_staff or request.user.is_superuser:
+        FormClass = UsuarioForm
+        kwargs = {"instance": usuario, "request_user": request.user}
+    else:
+        FormClass = UsuarioUpdateForm
+        kwargs = {"instance": usuario}
+
     if request.method == 'POST':
-        form = UsuarioUpdateForm(request.POST, instance=usuario)
+        form = FormClass(request.POST, **{k: v for k, v in kwargs.items() if k != "instance"}, instance=usuario)
         if form.is_valid():
             form.save()
             messages.success(request, 'Usuário atualizado com sucesso!')
@@ -60,7 +68,7 @@ def editar_usuario(request, user_id):
                 return redirect('cal:listar_usuarios')
             return redirect('cal:perfil')
     else:
-        form = UsuarioUpdateForm(instance=usuario)
+        form = FormClass(**kwargs)
     return render(request, 'user/form_usuario.html', {'form': form, 'titulo': 'Editar Usuário'})
 
 
@@ -96,13 +104,13 @@ def adicionar_usuario(request):
         messages.error(request, 'Sem permissão.')
         return redirect('cal:home')
     if request.method == 'POST':
-        form = UsuarioForm(request.POST)
+        form = UsuarioForm(request.POST, request_user=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, 'Usuário adicionado com sucesso!')
             return redirect('cal:listar_usuarios')
     else:
-        form = UsuarioForm()
+        form = UsuarioForm(request_user=request.user)
     return render(request, 'user/form_usuario.html', {'form': form, 'titulo': 'Adicionar Usuário'})
 
 

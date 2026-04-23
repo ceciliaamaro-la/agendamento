@@ -1,55 +1,127 @@
 {% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
 {% block content %}
-<div class="container mt-5">
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card shadow border-0">
-                <div class="card-header bg-primary text-white py-3">
-                    <h5 class="mb-0"><i class="bi bi-person-gear"></i> {{ titulo }}</h5>
-                </div>
-                <div class="card-body p-4">
-                    <form method="post">
-                        {% csrf_token %}
-                        {{ form.as_p }}
-                        <button type="submit" name="perfil_submit" class="btn btn-primary w-100">
-                            <i class="bi bi-check-circle"></i> Salvar Alterações
-                        </button>
-                    </form>
-                </div>
-            </div>
+<div class="container mt-4">
+  <div class="row">
+    <div class="{% if titulo == 'Meu Perfil' %}col-lg-7{% else %}col-lg-9 mx-auto{% endif %} mb-4">
+      <div class="card shadow border-0">
+        <div class="card-header bg-primary text-white py-3 d-flex align-items-center justify-content-between">
+          <h5 class="mb-0"><i class="bi bi-person-gear"></i> {{ titulo }}</h5>
+          <a href="{% url 'cal:listar_usuarios' %}" class="btn btn-sm btn-light"><i class="bi bi-arrow-left"></i> Voltar</a>
         </div>
+        <div class="card-body p-4">
+          <form method="post" novalidate>{% csrf_token %}
 
-        {% if titulo == 'Meu Perfil' %}
-        <div class="col-md-6">
-            <div class="card shadow border-0">
-                <div class="card-header bg-dark text-white py-3">
-                    <h5 class="mb-0"><i class="bi bi-shield-lock"></i> Alterar Senha</h5>
+            {# ── Identificação ─────────────────────────── #}
+            <h6 class="text-uppercase text-muted small fw-bold mb-3"><i class="bi bi-person-badge me-1"></i>Identificação</h6>
+            <div class="row g-3">
+              {% for field in form %}{% if field.name == 'username' or field.name == 'email' or field.name == 'first_name' or field.name == 'last_name' %}
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {{ field }}
+                  {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                  {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
                 </div>
-                <div class="card-body p-4">
-                    <form method="post">
-                        {% csrf_token %}
-                        {% for field in password_form %}
-                            <div class="mb-3">
-                                <label class="form-label">{{ field.label }}</label>
-                                <input type="{{ field.field.widget.input_type|default:'password' }}" 
-                                       name="{{ field.name }}" 
-                                       class="form-control {% if field.errors %}is-invalid{% endif %}">
-                                {% if field.help_text %}
-                                    <div class="form-text small text-muted">{{ field.help_text|safe }}</div>
-                                {% endif %}
-                                {% for error in field.errors %}
-                                    <div class="invalid-feedback">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        {% endfor %}
-                        <button type="submit" name="password_submit" class="btn btn-dark w-100">
-                            <i class="bi bi-key"></i> Atualizar Senha
-                        </button>
-                    </form>
-                </div>
+              {% endif %}{% endfor %}
             </div>
+
+            {# ── Senha ─────────────────────────────────── #}
+            {% if form.password %}
+            <hr class="my-4">
+            <h6 class="text-uppercase text-muted small fw-bold mb-3"><i class="bi bi-shield-lock me-1"></i>Senha</h6>
+            <div class="row g-3">
+              {% for field in form %}{% if field.name == 'password' or field.name == 'confirmar_senha' %}
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {{ field }}
+                  {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                  {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+              {% endif %}{% endfor %}
+            </div>
+            {% endif %}
+
+            {# ── Perfil / Vínculos ─────────────────────── #}
+            {% if form.papel %}
+            <hr class="my-4">
+            <h6 class="text-uppercase text-muted small fw-bold mb-3"><i class="bi bi-diagram-3 me-1"></i>Perfil e vínculos</h6>
+            <div class="row g-3">
+              {% for field in form %}{% if field.name == 'papel' or field.name == 'escola' or field.name == 'professor_vinculado' %}
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {{ field }}
+                  {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                  {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+              {% endif %}{% endfor %}
+              {% if form.escolas_extras %}
+                <div class="col-12">
+                  <label class="form-label fw-semibold" for="{{ form.escolas_extras.id_for_label }}">{{ form.escolas_extras.label }}</label>
+                  {{ form.escolas_extras }}
+                  {% if form.escolas_extras.help_text %}<div class="form-text">{{ form.escolas_extras.help_text }}</div>{% endif %}
+                  {% for e in form.escolas_extras.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+              {% endif %}
+            </div>
+            {% endif %}
+
+            {# ── Status / Permissões avançadas ─────────── #}
+            {% if form.is_active %}
+            <hr class="my-4">
+            <h6 class="text-uppercase text-muted small fw-bold mb-3"><i class="bi bi-toggles me-1"></i>Status e permissões</h6>
+            <div class="row g-3">
+              {% for field in form %}{% if field.name == 'is_active' or field.name == 'is_staff' or field.name == 'is_superuser' %}
+                <div class="col-md-4">
+                  <div class="form-check">
+                    {{ field }}
+                    <label class="form-check-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  </div>
+                  {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+                  {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+              {% endif %}{% endfor %}
+            </div>
+            {% endif %}
+
+            {% if form.non_field_errors %}<div class="alert alert-danger mt-3">{{ form.non_field_errors }}</div>{% endif %}
+
+            <div class="d-flex gap-2 mt-4 justify-content-end">
+              <a href="{% url 'cal:listar_usuarios' %}" class="btn btn-outline-secondary">Cancelar</a>
+              <button type="submit" name="perfil_submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> Salvar
+              </button>
+            </div>
+          </form>
         </div>
-        {% endif %}
+      </div>
     </div>
+
+    {% if titulo == 'Meu Perfil' %}
+    <div class="col-lg-5">
+      <div class="card shadow border-0">
+        <div class="card-header bg-dark text-white py-3">
+          <h5 class="mb-0"><i class="bi bi-shield-lock"></i> Alterar Senha</h5>
+        </div>
+        <div class="card-body p-4">
+          <form method="post">{% csrf_token %}
+            {% for field in password_form %}
+              <div class="mb-3">
+                <label class="form-label">{{ field.label }}</label>
+                <input type="{{ field.field.widget.input_type|default:'password' }}"
+                       name="{{ field.name }}"
+                       class="form-control {% if field.errors %}is-invalid{% endif %}">
+                {% if field.help_text %}<div class="form-text small text-muted">{{ field.help_text|safe }}</div>{% endif %}
+                {% for error in field.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+              </div>
+            {% endfor %}
+            <button type="submit" name="password_submit" class="btn btn-dark w-100">
+              <i class="bi bi-key"></i> Atualizar Senha
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}
