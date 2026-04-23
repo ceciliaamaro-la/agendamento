@@ -439,6 +439,98 @@ class PerfilUsuario(models.Model):
         )
 
 
+class ProfessorUsuario(models.Model):
+    """Histórico de usuários que utilizam/utilizaram o perfil de um Professor.
+
+    Ao trocar o usuário do professor, o vínculo anterior é encerrado
+    (data_fim preenchida) e um novo é criado, preservando o histórico
+    sem perder informações já vinculadas ao Professor.
+    """
+
+    professor = models.ForeignKey(
+        Professor, on_delete=models.CASCADE, related_name="vinculos_usuarios"
+    )
+    usuario = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="vinculos_professor"
+    )
+    data_inicio = models.DateField(verbose_name="Início do vínculo")
+    data_fim = models.DateField(
+        null=True, blank=True, verbose_name="Fim do vínculo",
+        help_text="Deixe em branco enquanto o vínculo estiver ativo.",
+    )
+    ativo = models.BooleanField(default=True)
+    observacao = models.TextField(blank=True, verbose_name="Observação")
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-ativo", "-data_inicio"]
+        verbose_name = "Vínculo Professor ↔ Usuário"
+        verbose_name_plural = "Vínculos Professor ↔ Usuário"
+
+    def __str__(self):
+        estado = "ativo" if self.ativo else "encerrado"
+        return f"{self.usuario.username} → {self.professor.nome_professor} ({estado})"
+
+    def encerrar(self, data_fim=None):
+        from datetime import date
+        self.data_fim = data_fim or date.today()
+        self.ativo = False
+        self.save()
+
+
+class Monitoria(models.Model):
+    """Programação de monitorias por escola.
+
+    Cada registro corresponde a um horário de monitoria oferecido por
+    um(a) docente, em um determinado dia da semana, sala e nível de ensino.
+    """
+
+    NIVEL_FUNDAMENTAL = "fundamental"
+    NIVEL_MEDIO = "medio"
+    NIVEL_CHOICES = [
+        (NIVEL_FUNDAMENTAL, "Ensino Fundamental"),
+        (NIVEL_MEDIO, "Ensino Médio"),
+    ]
+
+    escola = models.ForeignKey(
+        Escola, on_delete=models.CASCADE, related_name="monitorias"
+    )
+    professor = models.ForeignKey(
+        Professor, on_delete=models.CASCADE, related_name="monitorias",
+        verbose_name="Docente",
+    )
+    materia = models.ForeignKey(
+        Materia, on_delete=models.CASCADE, related_name="monitorias",
+        verbose_name="Componente curricular",
+    )
+    dia = models.ForeignKey(
+        Dias, on_delete=models.CASCADE, related_name="monitorias",
+        verbose_name="Dia da semana",
+    )
+    hora_inicio = models.TimeField(verbose_name="Início")
+    hora_fim = models.TimeField(verbose_name="Término")
+    sala = models.CharField(max_length=30, verbose_name="Sala")
+    nivel_ensino = models.CharField(
+        max_length=20, choices=NIVEL_CHOICES, default=NIVEL_FUNDAMENTAL,
+        verbose_name="Nível de ensino",
+    )
+    observacao = models.CharField(max_length=255, blank=True)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["escola", "dia__ordem", "hora_inicio"]
+        verbose_name = "Monitoria"
+        verbose_name_plural = "Monitorias"
+
+    def __str__(self):
+        return f"{self.professor} — {self.materia} — {self.dia} {self.faixa_horaria}"
+
+    @property
+    def faixa_horaria(self):
+        return f"{self.hora_inicio.strftime('%Hh%M')} às {self.hora_fim.strftime('%Hh%M')}"
+
+
 class WhatsAppEnvio(models.Model):
 
     turma = models.ForeignKey(

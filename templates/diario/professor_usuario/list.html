@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Vínculos Professor ↔ Usuário{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold text-primary"><i class="bi bi-link-45deg"></i> Vínculos Professor ↔ Usuário</h2>
+    <a href="{% url 'cal:vinculo_create' %}" class="btn btn-success btn-sm">
+      <i class="bi bi-plus-circle"></i> Novo Vínculo
+    </a>
+  </div>
+  <div class="alert alert-info small">
+    Ao trocar o usuário responsável por um(a) professor(a), todas as informações
+    permanecem vinculadas ao <strong>Professor</strong> (aulas, deveres, monitorias e horários).
+    O histórico abaixo registra quem usou o perfil ao longo do tempo.
+  </div>
+  <div class="card shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Professor</th><th>Escola</th><th>Usuário</th>
+            <th>Início</th><th>Fim</th><th>Status</th>
+            <th class="text-center" style="width:180px">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in vinculos %}
+          <tr>
+            <td>{{ v.professor.nome_professor }}</td>
+            <td>{{ v.professor.escola }}</td>
+            <td>{{ v.usuario.username }}{% if v.usuario.get_full_name %} <small class="text-muted">({{ v.usuario.get_full_name }})</small>{% endif %}</td>
+            <td>{{ v.data_inicio|date:"d/m/Y" }}</td>
+            <td>{{ v.data_fim|date:"d/m/Y"|default:"—" }}</td>
+            <td>{% if v.ativo %}<span class="badge bg-success">Ativo</span>{% else %}<span class="badge bg-secondary">Encerrado</span>{% endif %}</td>
+            <td class="text-center text-nowrap">
+              <a href="{% url 'cal:vinculo_update' v.pk %}" class="btn btn-sm btn-warning me-1"><i class="bi bi-pencil"></i></a>
+              {% if v.ativo %}<a href="{% url 'cal:vinculo_encerrar' v.pk %}" class="btn btn-sm btn-outline-secondary me-1" title="Encerrar"><i class="bi bi-box-arrow-right"></i></a>{% endif %}
+              <a href="{% url 'cal:vinculo_delete' v.pk %}" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-center text-muted py-4">Nenhum vínculo cadastrado.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

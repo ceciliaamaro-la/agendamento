@@ -16,6 +16,8 @@ from .views import views_horario
 from .views import views_aula
 from .views import views_ordem_horario
 from .views import views_cascade
+from .views import views_monitoria
+from .views import views_professor_usuario
 
 app_name = 'cal'
 
@@ -124,6 +126,20 @@ urlpatterns = [
     path('diario/', views_aula.diario_list, name='diario_list'),
     path('diario/aula/<int:pk>/chamada/', views_aula.diario_chamada, name='diario_chamada'),
     path('diario/aula/<int:pk>/detalhe/', views_aula.diario_detail, name='diario_detail'),
+
+    # ─── Monitorias ────────────────────────────────────────────────────────────
+    path('monitorias/', views_monitoria.monitoria_programacao, name='monitoria_programacao'),
+    path('monitorias/gerenciar/', views_monitoria.monitoria_list, name='monitoria_list'),
+    path('monitorias/nova/', views_monitoria.monitoria_create, name='monitoria_create'),
+    path('monitorias/<int:pk>/editar/', views_monitoria.monitoria_update, name='monitoria_update'),
+    path('monitorias/<int:pk>/excluir/', views_monitoria.monitoria_delete, name='monitoria_delete'),
+
+    # ─── Vínculos Professor ↔ Usuário ──────────────────────────────────────────
+    path('vinculos-professor/', views_professor_usuario.vinculo_list, name='vinculo_list'),
+    path('vinculos-professor/novo/', views_professor_usuario.vinculo_create, name='vinculo_create'),
+    path('vinculos-professor/<int:pk>/editar/', views_professor_usuario.vinculo_update, name='vinculo_update'),
+    path('vinculos-professor/<int:pk>/encerrar/', views_professor_usuario.vinculo_encerrar, name='vinculo_encerrar'),
+    path('vinculos-professor/<int:pk>/excluir/', views_professor_usuario.vinculo_delete, name='vinculo_delete'),
 
     # ─── Cascata AJAX (autopreenchimento de selects) ──────────────────────────
     path('api/cascade/professor/<int:pk>/', views_cascade.cascade_professor, name='cascade_professor'),

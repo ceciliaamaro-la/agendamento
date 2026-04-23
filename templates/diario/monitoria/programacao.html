@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Programação das Monitorias{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold text-primary"><i class="bi bi-mortarboard-fill"></i> Programação das Monitorias</h2>
+    {% if pode_admin %}
+    <div>
+      <a href="{% url 'cal:monitoria_list' %}" class="btn btn-outline-primary btn-sm me-1">
+        <i class="bi bi-list-ul"></i> Gerenciar
+      </a>
+      <a href="{% url 'cal:monitoria_create' %}" class="btn btn-success btn-sm">
+        <i class="bi bi-plus-circle"></i> Nova Monitoria
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  {% for esc in escolas %}
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-primary text-white">
+        <strong>{{ esc.nome }}</strong>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle text-center mb-0">
+          <thead class="table-light">
+            <tr>
+              <th rowspan="2" style="vertical-align:middle;">DOCENTE</th>
+              <th rowspan="2" style="vertical-align:middle;">COMPONENTE<br>CURRICULAR</th>
+              <th colspan="{{ dias|length }}">DIA DA SEMANA</th>
+            </tr>
+            <tr>
+              {% for d in dias %}<th>{{ d.dias|upper }}</th>{% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for linha in esc.linhas %}
+            <tr>
+              <td class="fw-bold text-start">{{ linha.professor }}</td>
+              <td class="text-start">{{ linha.materia }}</td>
+              {% for c in linha.celulas %}
+                <td>
+                  {% for m in c.items %}
+                    <div class="mb-1">
+                      <div>{{ m.faixa_horaria }}</div>
+                      <small class="text-muted">{{ m.get_nivel_ensino_display }}</small><br>
+                      <small><i class="bi bi-geo-alt"></i> Sala {{ m.sala }}</small>
+                      {% if m.observacao %}<br><small class="fst-italic">{{ m.observacao }}</small>{% endif %}
+                    </div>
+                  {% empty %}
+                    <span class="text-muted">—</span>
+                  {% endfor %}
+                </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% empty %}
+    <div class="alert alert-info">
+      Nenhuma monitoria cadastrada{% if pode_admin %}. Clique em <strong>Nova Monitoria</strong> para começar{% endif %}.
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -49,6 +49,14 @@
     </a>
     {% endif %}
 
+    {# ── Monitorias: visível para todos os usuários logados ─────────────── #}
+    <a href="{% url 'cal:monitoria_programacao' %}"
+       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
+              {% if 'monitoria' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <i class="bi bi-mortarboard-fill fs-5"></i>
+        <span>Monitorias</span>
+    </a>
+
     {# ── Eventos / Cadastros (admin_escola e superadmin) ─────────────────── #}
     {% if is_admin_escola %}
     <a href="{% url 'cal:agenda_list' %}"
@@ -85,9 +93,16 @@
 
     <a href="{% url 'cal:professor_list' %}"
        class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
-              {% if 'professor' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+              {% if 'professor' in request.resolver_match.url_name|default:'' and 'vinculo' not in request.resolver_match.url_name|default:'' %}active{% endif %}">
         <i class="bi bi-person-badge fs-5"></i>
         <span>Professores</span>
+    </a>
+
+    <a href="{% url 'cal:vinculo_list' %}"
+       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
+              {% if 'vinculo' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <i class="bi bi-link-45deg fs-5"></i>
+        <span>Vínculos Professor↔Usuário</span>
     </a>
 
     <a href="{% url 'cal:livro_list' %}"

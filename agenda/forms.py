@@ -17,6 +17,8 @@ from .models import (
     Horario,
     Aula,
     DiarioAluno,
+    Monitoria,
+    ProfessorUsuario,
 )
 
 
@@ -537,3 +539,57 @@ DiarioAlunoFormSet = inlineformset_factory(
     can_delete=False,
     fields=["aluno", "presente", "observacao"],
 )
+
+
+# ===============================
+# 🎓 MONITORIA
+# ===============================
+
+class MonitoriaForm(forms.ModelForm):
+    class Meta:
+        model = Monitoria
+        fields = ["escola", "professor", "materia", "dia", "hora_inicio", "hora_fim", "sala", "nivel_ensino", "ativo", "observacao"]
+        widgets = {
+            "escola":       forms.Select(attrs={"class": "form-select"}),
+            "professor":    forms.Select(attrs={"class": "form-select"}),
+            "materia":      forms.Select(attrs={"class": "form-select"}),
+            "dia":          forms.Select(attrs={"class": "form-select"}),
+            "hora_inicio":  forms.TimeInput(attrs={"class": "form-control", "type": "time"}),
+            "hora_fim":     forms.TimeInput(attrs={"class": "form-control", "type": "time"}),
+            "sala":         forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex: 210"}),
+            "nivel_ensino": forms.Select(attrs={"class": "form-select"}),
+            "ativo":        forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "observacao":   forms.TextInput(attrs={"class": "form-control"}),
+        }
+
+    def clean(self):
+        dados = super().clean()
+        ini, fim = dados.get("hora_inicio"), dados.get("hora_fim")
+        if ini and fim and fim <= ini:
+            raise forms.ValidationError("O horário de término deve ser posterior ao início.")
+        return dados
+
+
+# ===============================
+# 🔗 VÍNCULO PROFESSOR ↔ USUÁRIO
+# ===============================
+
+class ProfessorUsuarioForm(forms.ModelForm):
+    class Meta:
+        model = ProfessorUsuario
+        fields = ["professor", "usuario", "data_inicio", "data_fim", "ativo", "observacao"]
+        widgets = {
+            "professor":   forms.Select(attrs={"class": "form-select"}),
+            "usuario":     forms.Select(attrs={"class": "form-select"}),
+            "data_inicio": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "data_fim":    forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "ativo":       forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "observacao":  forms.Textarea(attrs={"class": "form-control", "rows": 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["data_inicio"].input_formats = ["%Y-%m-%d"]
+        self.fields["data_fim"].input_formats = ["%Y-%m-%d"]
+        self.fields["data_fim"].required = False
+

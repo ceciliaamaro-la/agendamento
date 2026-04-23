@@ -13,7 +13,23 @@ from .models import (
     Professor,
     Materia,
     Livro,
+    Monitoria,
+    ProfessorUsuario,
 )
+
+
+@admin.register(Monitoria)
+class MonitoriaAdmin(admin.ModelAdmin):
+    list_display = ("escola", "professor", "materia", "dia", "hora_inicio", "hora_fim", "sala", "nivel_ensino", "ativo")
+    list_filter = ("escola", "dia", "nivel_ensino", "ativo")
+    search_fields = ("professor__nome_professor", "materia__nome_materia", "sala")
+
+
+@admin.register(ProfessorUsuario)
+class ProfessorUsuarioAdmin(admin.ModelAdmin):
+    list_display = ("professor", "usuario", "data_inicio", "data_fim", "ativo")
+    list_filter = ("ativo", "professor__escola")
+    search_fields = ("professor__nome_professor", "usuario__username")
 
 
 @admin.register(Escola)

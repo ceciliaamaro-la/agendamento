@@ -23,6 +23,14 @@ Sistema de acompanhamento de eventos escolares. Faz scraping da plataforma Berno
 - `AgendaEvento` — eventos scraped (título, data, tipo, hash único)
 - `TarefaCompleta` — aluno + evento, marca se concluído (unique_together)
 - `WhatsAppEnvio` — controle de envios por turma+hash
+- `Professor` — vinculado a Escola/Matéria; informações pedagógicas (Aulas, Horários, Monitorias) referenciam Professor (não User), preservando dados quando o usuário muda
+- `ProfessorUsuario` — histórico de quem usou o perfil de cada Professor (data_inicio, data_fim, ativo). Ao criar/editar um vínculo ativo, vínculos ativos anteriores do mesmo professor são automaticamente encerrados
+- `Monitoria` — programação de monitorias por escola: docente, componente curricular, dia da semana, horário (início/fim), sala, nível de ensino (Fundamental/Médio)
+
+## Programação de Monitorias
+- `/monitorias/` — visualização pública (todos os logados) em formato pivotado: linha por (Professor × Componente), colunas pelos dias da semana
+- `/monitorias/gerenciar/`, `/monitorias/nova/` — CRUD restrito a admin/coordenação (admin_escola_required)
+- `/vinculos-professor/` — gestão de histórico de vínculos Professor↔Usuário (admin_escola)
 
 ## URLs principais
 - `/` — home (requer login para ver painel)

@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}{{ titulo }}{% endblock %}
+{% block content %}
+<div class="container mt-4" style="max-width:560px">
+  <div class="card shadow-sm p-4">
+    <h2 class="fw-bold text-secondary"><i class="bi bi-box-arrow-right"></i> {{ titulo }}</h2>
+    <p class="mt-3">Encerrar o vínculo <strong>{{ obj }}</strong>? A data de encerramento será a de hoje e o usuário deixará de ter o perfil deste professor.</p>
+    <form method="post" class="d-flex gap-2 justify-content-end">{% csrf_token %}
+      <a href="{% url 'cal:vinculo_list' %}" class="btn btn-secondary">Cancelar</a>
+      <button class="btn btn-warning" type="submit">Encerrar</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
