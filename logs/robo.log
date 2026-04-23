@@ -1683,3 +1683,8 @@ Watching for file changes with StatReloader
 ✅ Aluno Cecília Amaro — Teste Título — concluida=True
 /home/runner/workspace/agenda/views/views_user.py changed, reloading.
 Watching for file changes with StatReloader
+Not Found: /favicon.ico
+/home/runner/workspace/agenda/views/views_escola.py changed, reloading.
+Watching for file changes with StatReloader
+/home/runner/workspace/agenda/views/views_agenda.py changed, reloading.
+Watching for file changes with StatReloader

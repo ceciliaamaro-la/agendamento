@@ -76,12 +76,14 @@
         <span class="text-uppercase text-secondary" style="font-size:.7rem;letter-spacing:.08em;">Cadastros</span>
     </div>
 
+    {% if is_admin_escola %}
     <a href="{% url 'cal:escola_list' %}"
        class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
               {% if 'escola' in request.resolver_match.url_name|default:'' %}active{% endif %}">
         <i class="bi bi-building fs-5"></i>
         <span>Escolas</span>
     </a>
+    {% endif %}
 
     <a href="{% url 'cal:turma_list' %}"
        class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none

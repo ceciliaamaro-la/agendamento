@@ -30,7 +30,7 @@ def _evento_ou_403(request, pk):
 def agenda_list(request):
     agendas = eventos_do_usuario(request.user).select_related(
         'turma', 'turma__escola', 'escola', 'professor', 'materia'
-    ).order_by('-inicio', '-data')
+    ).order_by('turma__escola__nome_escola', 'turma__nome_turma', '-inicio', '-data')
     return render(request, 'agenda/list.html', {
         'agendas': agendas,
         'pode_criar': is_admin_escola(request.user) or is_professor(request.user),

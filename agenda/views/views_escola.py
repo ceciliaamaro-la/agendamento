@@ -12,7 +12,7 @@ from agenda.services.escopo import (
 )
 
 
-@bloquear_alunos_responsaveis
+@admin_escola_required
 def escola_list(request):
     escolas = escolas_do_usuario(request.user).order_by("nome_escola")
     return render(request, 'escola/list.html', {
