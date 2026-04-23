@@ -551,13 +551,13 @@ class MonitoriaForm(forms.ModelForm):
         fields = ["escola", "professor", "materia", "dia", "hora_inicio", "hora_fim", "sala", "nivel_ensino", "ativo", "observacao"]
         widgets = {
             "escola":       forms.Select(attrs={"class": "form-select"}),
-            "professor":    forms.Select(attrs={"class": "form-select"}),
-            "materia":      forms.Select(attrs={"class": "form-select"}),
+            "professor":    forms.Select(attrs={"class": "form-select", "data-cascade": "professor"}),
+            "materia":      forms.Select(attrs={"class": "form-select", "data-cascade": "materia"}),
             "dia":          forms.Select(attrs={"class": "form-select"}),
             "hora_inicio":  forms.TimeInput(attrs={"class": "form-control", "type": "time"}),
             "hora_fim":     forms.TimeInput(attrs={"class": "form-control", "type": "time"}),
             "sala":         forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex: 210"}),
-            "nivel_ensino": forms.Select(attrs={"class": "form-select"}),
+            "nivel_ensino": forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex: Ensino Fundamental"}),
             "ativo":        forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "observacao":   forms.TextInput(attrs={"class": "form-control"}),
         }

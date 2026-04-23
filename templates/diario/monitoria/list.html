@@ -32,7 +32,7 @@
             <td>{{ m.dia }}</td>
             <td>{{ m.faixa_horaria }}</td>
             <td>{{ m.sala }}</td>
-            <td>{{ m.get_nivel_ensino_display }}</td>
+            <td>{{ m.nivel_ensino|default:"—" }}</td>
             <td>{% if m.ativo %}<span class="badge bg-success">Sim</span>{% else %}<span class="badge bg-secondary">Não</span>{% endif %}</td>
             <td class="text-center text-nowrap">
               <a href="{% url 'cal:monitoria_update' m.pk %}" class="btn btn-sm btn-warning me-1"><i class="bi bi-pencil"></i></a>

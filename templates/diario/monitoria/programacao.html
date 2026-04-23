@@ -43,7 +43,7 @@
                   {% for m in c.items %}
                     <div class="mb-1">
                       <div>{{ m.faixa_horaria }}</div>
-                      <small class="text-muted">{{ m.get_nivel_ensino_display }}</small><br>
+                      {% if m.nivel_ensino %}<small class="text-muted">{{ m.nivel_ensino }}</small><br>{% endif %}
                       <small><i class="bi bi-geo-alt"></i> Sala {{ m.sala }}</small>
                       {% if m.observacao %}<br><small class="fst-italic">{{ m.observacao }}</small>{% endif %}
                     </div>

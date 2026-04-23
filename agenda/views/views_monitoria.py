@@ -6,9 +6,14 @@ from django.http import HttpResponseForbidden
 from ..models import Monitoria, Escola, Dias
 from ..forms import MonitoriaForm
 from ..services.escopo import (
-    admin_escola_required, filtrar_por_escola, pode_administrar_escola,
-    escolas_administradas, is_admin_escola,
+    admin_estrito_required, filtrar_por_escola, pode_administrar_escola,
+    escolas_administradas, is_superadmin, papel_de,
 )
+from ..models import PerfilUsuario
+
+
+def _pode_editar_monitoria(user):
+    return is_superadmin(user) or papel_de(user) == PerfilUsuario.PAPEL_ADMIN_ESCOLA
 
 
 @login_required
@@ -45,11 +50,11 @@ def monitoria_programacao(request):
     return render(request, "diario/monitoria/programacao.html", {
         "escolas": escolas,
         "dias": dias,
-        "pode_admin": is_admin_escola(request.user),
+        "pode_admin": _pode_editar_monitoria(request.user),
     })
 
 
-@admin_escola_required
+@admin_estrito_required
 def monitoria_list(request):
     monitorias = filtrar_por_escola(
         Monitoria.objects.select_related("escola", "professor", "materia", "dia").all(),
@@ -64,7 +69,7 @@ def _form_com_escopo(request, instance=None):
     return form
 
 
-@admin_escola_required
+@admin_estrito_required
 def monitoria_create(request):
     form = _form_com_escopo(request)
     if request.method == "POST" and form.is_valid():
@@ -77,7 +82,7 @@ def monitoria_create(request):
     return render(request, "diario/monitoria/form.html", {"form": form, "titulo": "Nova Monitoria"})
 
 
-@admin_escola_required
+@admin_estrito_required
 def monitoria_update(request, pk):
     obj = get_object_or_404(Monitoria, pk=pk)
     if not pode_administrar_escola(request.user, obj.escola):
@@ -93,7 +98,7 @@ def monitoria_update(request, pk):
     return render(request, "diario/monitoria/form.html", {"form": form, "titulo": "Editar Monitoria"})
 
 
-@admin_escola_required
+@admin_estrito_required
 def monitoria_delete(request, pk):
     obj = get_object_or_404(Monitoria, pk=pk)
     if not pode_administrar_escola(request.user, obj.escola):

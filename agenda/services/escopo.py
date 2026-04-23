@@ -259,6 +259,18 @@ def admin_escola_required(view_func):
     return wrapped
 
 
+def admin_estrito_required(view_func):
+    """Permite somente Administrador da Escola (admin_escola) e Super-admin.
+    Coordenador NÃO tem acesso (use admin_escola_required para incluir coordenador)."""
+    @wraps(view_func)
+    @login_required
+    def wrapped(request, *args, **kwargs):
+        if not (is_superadmin(request.user) or papel_de(request.user) == PerfilUsuario.PAPEL_ADMIN_ESCOLA):
+            return _negar(request, "Apenas Administrador da Escola pode acessar esta área.")
+        return view_func(request, *args, **kwargs)
+    return wrapped
+
+
 def superadmin_required(view_func):
     """Permite acesso somente ao super-administrador (configurações globais)."""
     @wraps(view_func)

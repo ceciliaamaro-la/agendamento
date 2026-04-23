@@ -485,13 +485,6 @@ class Monitoria(models.Model):
     um(a) docente, em um determinado dia da semana, sala e nível de ensino.
     """
 
-    NIVEL_FUNDAMENTAL = "fundamental"
-    NIVEL_MEDIO = "medio"
-    NIVEL_CHOICES = [
-        (NIVEL_FUNDAMENTAL, "Ensino Fundamental"),
-        (NIVEL_MEDIO, "Ensino Médio"),
-    ]
-
     escola = models.ForeignKey(
         Escola, on_delete=models.CASCADE, related_name="monitorias"
     )
@@ -511,8 +504,9 @@ class Monitoria(models.Model):
     hora_fim = models.TimeField(verbose_name="Término")
     sala = models.CharField(max_length=30, verbose_name="Sala")
     nivel_ensino = models.CharField(
-        max_length=20, choices=NIVEL_CHOICES, default=NIVEL_FUNDAMENTAL,
+        max_length=80, blank=True, default="",
         verbose_name="Nível de ensino",
+        help_text="Texto livre. Ex.: Ensino Fundamental, Ensino Médio, 9º ano...",
     )
     observacao = models.CharField(max_length=255, blank=True)
     ativo = models.BooleanField(default=True)
