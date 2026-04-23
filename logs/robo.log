@@ -1678,3 +1678,5 @@ Traceback (most recent call last):
 django.core.exceptions.FieldError: Cannot resolve keyword 'alunos' into field. Choices are: agendaevento, aluno, aulas, conexaoagenda, criado_em, escola, escola_id, horarios, id, nome_turma, whatsappenvio
 /home/runner/workspace/agenda/services/escopo.py changed, reloading.
 Watching for file changes with StatReloader
+/home/runner/workspace/agenda/views/views_user.py changed, reloading.
+Watching for file changes with StatReloader

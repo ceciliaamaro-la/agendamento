@@ -5,14 +5,17 @@
 <div class="container-fluid mt-4">
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold text-primary"><i class="bi bi-calendar-event"></i> Eventos da Agenda</h2>
+    {% if is_admin_escola %}
     <a href="{% url 'cal:agenda_create' %}" class="btn btn-success btn-sm">
       <i class="bi bi-plus-circle"></i> Novo Evento
     </a>
+    {% endif %}
   </div>
 
   <form method="post" action="{% url 'cal:agenda_delete_bulk' %}" id="form-bulk">
     {% csrf_token %}
 
+    {% if is_admin_escola %}
     <!-- Barra de ações em lote (aparece ao selecionar) -->
     <div id="bulk-bar" class="d-none mb-3 d-flex align-items-center gap-3">
       <span id="bulk-count" class="text-muted small fw-semibold"></span>
@@ -24,16 +27,19 @@
         Desmarcar todos
       </button>
     </div>
+    {% endif %}
 
     <div class="card shadow-sm">
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
           <thead class="table-light">
             <tr>
+              {% if is_admin_escola %}
               <th style="width:36px">
                 <input type="checkbox" id="check-all" class="form-check-input"
                        title="Selecionar todos">
               </th>
+              {% endif %}
               <th style="min-width:160px">Início</th>
               <th style="min-width:160px">Término</th>
               <th>Título / Descrição</th>
@@ -41,17 +47,19 @@
               <th>Turma</th>
               <th class="text-center">Anexo</th>
               <th class="text-center">WhatsApp</th>
-              <th class="text-center">Ações</th>
+              {% if is_admin_escola %}<th class="text-center">Ações</th>{% endif %}
             </tr>
           </thead>
           <tbody>
             {% for agenda in agendas %}
             <tr>
+              {% if is_admin_escola %}
               <!-- Checkbox -->
               <td>
                 <input type="checkbox" name="ids" value="{{ agenda.pk }}"
                        class="form-check-input row-check">
               </td>
+              {% endif %}
 
               <!-- Início -->
               <td>
@@ -127,6 +135,7 @@
                 {% endif %}
               </td>
 
+              {% if is_admin_escola %}
               <!-- Ações -->
               <td class="text-center text-nowrap">
                 <a href="{% url 'cal:agenda_update' agenda.pk %}" class="btn btn-sm btn-warning me-1">
@@ -136,10 +145,11 @@
                   <i class="bi bi-trash"></i>
                 </a>
               </td>
+              {% endif %}
             </tr>
             {% empty %}
             <tr>
-              <td colspan="9" class="text-center text-muted py-5">
+              <td colspan="{% if is_admin_escola %}9{% else %}7{% endif %}" class="text-center text-muted py-5">
                 <i class="bi bi-calendar-x fs-3 d-block mb-2"></i>
                 Nenhum evento encontrado.
               </td>
@@ -158,6 +168,7 @@
   const bulkBar     = document.getElementById('bulk-bar');
   const bulkCount   = document.getElementById('bulk-count');
   const btnDeselect = document.getElementById('btn-deselect');
+  if (!checkAll || !bulkBar) return;
 
   function updateBar() {
     const checked = document.querySelectorAll('.row-check:checked');

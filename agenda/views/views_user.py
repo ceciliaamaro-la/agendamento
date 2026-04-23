@@ -18,16 +18,26 @@ def bemvindo(request):
 
 @login_required
 def perfil_usuario(request):
+    from ..services.escopo import is_admin_escola
+    pode_editar_username = is_admin_escola(request.user)
+
+    def _build_form(*args, **kwargs):
+        f = UsuarioUpdateForm(*args, **kwargs)
+        if not pode_editar_username and 'username' in f.fields:
+            f.fields['username'].disabled = True
+            f.fields['username'].help_text = 'Apenas administradores/coordenadores podem alterar o nome de usuário.'
+        return f
+
     if request.method == 'POST':
         if 'perfil_submit' in request.POST:
-            form = UsuarioUpdateForm(request.POST, instance=request.user)
+            form = _build_form(request.POST, instance=request.user)
             password_form = PasswordChangeForm(request.user)
             if form.is_valid():
                 form.save()
                 messages.success(request, 'Perfil atualizado com sucesso!')
                 return redirect('cal:perfil')
         elif 'password_submit' in request.POST:
-            form = UsuarioUpdateForm(instance=request.user)
+            form = _build_form(instance=request.user)
             password_form = PasswordChangeForm(request.user, request.POST)
             if password_form.is_valid():
                 user = password_form.save()
@@ -35,7 +45,7 @@ def perfil_usuario(request):
                 messages.success(request, 'Senha alterada com sucesso!')
                 return redirect('cal:perfil')
     else:
-        form = UsuarioUpdateForm(instance=request.user)
+        form = _build_form(instance=request.user)
         password_form = PasswordChangeForm(request.user)
 
     return render(request, 'user/form_usuario.html', {
