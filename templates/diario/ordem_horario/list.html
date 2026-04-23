@@ -42,8 +42,8 @@
           <tr>
             <td class="text-muted small">{{ o.posicao }}</td>
             <td class="fw-semibold">{{ o.ordem }}</td>
-            <td>{{ o.inicio|default:"—" }}</td>
-            <td>{{ o.termino|default:"—" }}</td>
+            <td>{% if o.inicio %}{{ o.inicio|time:"H:i" }} H{% else %}—{% endif %}</td>
+            <td>{% if o.termino %}{{ o.termino|time:"H:i" }} H{% else %}—{% endif %}</td>
             <td class="text-center text-nowrap">
               {% if not forloop.first %}
                 <a href="{% url 'cal:ordem_mover' o.pk 'cima' %}" class="btn btn-sm btn-outline-secondary" title="Mover para cima">
