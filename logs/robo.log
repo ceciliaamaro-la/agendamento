@@ -1914,3 +1914,11 @@ OSError: write error
 OSError: write error
 OSError: write error
 OSError: write error
+Watching for file changes with StatReloader
+Forbidden: /diario/aula/9/chamada/
+Forbidden: /diario/aula/10/chamada/
+Forbidden: /diario/aula/11/chamada/
+Forbidden: /diario/aula/12/chamada/
+/home/runner/workspace/agenda/services/escopo.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader

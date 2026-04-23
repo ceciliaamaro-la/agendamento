@@ -86,9 +86,28 @@ def is_responsavel(user):
 
 
 def professor_do_usuario(user):
-    """Retorna o Professor vinculado (ou None)."""
+    """Retorna o Professor vinculado (ou None).
+
+    Procura primeiro em PerfilUsuario.professor_vinculado (atalho rápido) e,
+    se vazio, recorre ao vínculo ATIVO mais recente em ProfessorUsuario.
+    Isso permite que professores recém-vinculados pelo admin (mas sem o
+    `professor_vinculado` preenchido no perfil) também sejam reconhecidos.
+    """
+    if not user or not user.is_authenticated:
+        return None
     perfil = _perfil(user)
-    return perfil.professor_vinculado if perfil else None
+    if perfil and perfil.professor_vinculado_id:
+        return perfil.professor_vinculado
+    # Fallback: vínculo ativo na tabela ProfessorUsuario
+    from ..models import ProfessorUsuario
+    pu = (
+        ProfessorUsuario.objects
+        .filter(usuario=user, ativo=True)
+        .select_related("professor")
+        .order_by("-data_inicio", "-id")
+        .first()
+    )
+    return pu.professor if pu else None
 
 
 # ── Helpers para Aluno / Responsável / Professor (escopo pedagógico) ───────
