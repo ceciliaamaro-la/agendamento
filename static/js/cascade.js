@@ -103,7 +103,9 @@
       });
 
       var turmaSel = $cascade("turma");
-      if (turmaSel && d.turmas.length) {
+      // Não substituímos a turma se o usuário já escolheu uma — evita que
+      // a cascata sobrescreva a turma selecionada (ex.: 181V virar 181M).
+      if (turmaSel && d.turmas.length && !turmaSel.value) {
         setOptions(turmaSel, d.turmas, { keep: true, autoOnSingle: true });
       }
 

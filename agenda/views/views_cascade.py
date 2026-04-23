@@ -31,14 +31,9 @@ def cascade_professor(request, pk):
 
     materias = Materia.objects.filter(professores__id=prof.id).distinct()
 
-    # Turmas: tenta pelo vínculo de Horário; se vazio, cai pra todas as turmas da escola
-    turmas = (
-        Turma.objects
-        .filter(escola_id=prof.escola_id, horarios__professor_id=prof.id)
-        .distinct()
-    )
-    if not turmas.exists():
-        turmas = Turma.objects.filter(escola_id=prof.escola_id)
+    # Turmas: todas as turmas da escola do professor (assim turmas novas,
+    # ainda sem horário cadastrado para este prof, também aparecem).
+    turmas = Turma.objects.filter(escola_id=prof.escola_id)
 
     livros = Livro.objects.filter(escola_id=prof.escola_id, materia_id=prof.materia_id)
 

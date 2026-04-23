@@ -20,6 +20,7 @@
                         <th>#</th>
                         <th>Nome da Turma</th>
                         <th>Escola</th>
+                        <th>Turno</th>
                         <th>Criado em</th>
                         {% if pode_admin %}<th class="text-center">Ações</th>{% endif %}
                     </tr>
@@ -30,6 +31,21 @@
                         <td class="text-muted small">{{ turma.pk }}</td>
                         <td><strong>{{ turma.nome_turma }}</strong></td>
                         <td>{{ turma.escola }}</td>
+                        <td>
+                            {% if turma.turno %}
+                                {% if turma.turno == 'M' %}
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-sunrise"></i> Matutino</span>
+                                {% elif turma.turno == 'V' %}
+                                    <span class="badge bg-info text-dark"><i class="bi bi-sun"></i> Vespertino</span>
+                                {% elif turma.turno == 'N' %}
+                                    <span class="badge bg-dark"><i class="bi bi-moon-stars"></i> Noturno</span>
+                                {% else %}
+                                    <span class="badge bg-secondary"><i class="bi bi-clock"></i> Integral</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
                         <td class="text-muted small">{{ turma.criado_em|date:"d/m/Y" }}</td>
                         {% if pode_admin %}
                         <td class="text-center">
@@ -44,7 +60,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="{% if pode_admin %}5{% else %}4{% endif %}" class="text-center text-muted py-4">
+                        <td colspan="{% if pode_admin %}6{% else %}5{% endif %}" class="text-center text-muted py-4">
                             <i class="bi bi-inbox fs-4 d-block mb-2"></i>
                             Nenhuma turma cadastrada.
                         </td>

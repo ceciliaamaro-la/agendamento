@@ -250,7 +250,7 @@ class TurmaForm(forms.ModelForm):
 
     class Meta:
         model = Turma
-        fields = ["escola", "nome_turma"]
+        fields = ["escola", "nome_turma", "turno"]
         widgets = {
             "escola": forms.Select(
                 attrs={"class": "form-select shadow-sm border-success", "style": "border-radius:10px;"}
@@ -262,8 +262,17 @@ class TurmaForm(forms.ModelForm):
                     "style": "border-radius:10px;"
                 }
             ),
+            "turno": forms.Select(
+                attrs={"class": "form-select shadow-sm border-success", "style": "border-radius:10px;"}
+            ),
         }
-        labels = {"escola": "Escola", "nome_turma": "Nome da Turma"}
+        labels = {"escola": "Escola", "nome_turma": "Nome da Turma", "turno": "Turno"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Garante que o select de turno mostre um placeholder claro
+        self.fields["turno"].required = True
+        self.fields["turno"].choices = [("", "— Selecione o turno —")] + list(Turma.TURNO_CHOICES)
 
 
 # ===============================

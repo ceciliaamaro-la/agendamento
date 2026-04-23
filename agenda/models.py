@@ -18,6 +18,17 @@ class Escola(models.Model):
 
 class Turma(models.Model):
 
+    TURNO_MATUTINO = "M"
+    TURNO_VESPERTINO = "V"
+    TURNO_NOTURNO = "N"
+    TURNO_INTEGRAL = "I"
+    TURNO_CHOICES = [
+        (TURNO_MATUTINO, "Matutino"),
+        (TURNO_VESPERTINO, "Vespertino"),
+        (TURNO_NOTURNO, "Noturno"),
+        (TURNO_INTEGRAL, "Integral"),
+    ]
+
     escola = models.ForeignKey(
         Escola,
         on_delete=models.SET_NULL,
@@ -31,10 +42,22 @@ class Turma(models.Model):
         null=True
     )
 
+    turno = models.CharField(
+        max_length=1,
+        choices=TURNO_CHOICES,
+        blank=True,
+        default="",
+        verbose_name="Turno",
+        help_text="Período em que a turma estuda.",
+    )
+
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.nome_turma or "Turma"
+
+    def get_turno_display_safe(self):
+        return self.get_turno_display() if self.turno else ""
 
 
 class Aluno(models.Model):
