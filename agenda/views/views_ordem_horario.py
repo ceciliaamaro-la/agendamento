@@ -20,7 +20,7 @@ def ordem_list(request):
     })
 
 
-@superadmin_required
+@admin_escola_required
 def ordem_create(request):
     form = OrdemHorarioForm(request.POST or None)
     if form.is_valid():
@@ -30,7 +30,7 @@ def ordem_create(request):
     return render(request, "diario/ordem_horario/form.html", {"form": form, "titulo": "Novo Período"})
 
 
-@superadmin_required
+@admin_escola_required
 def ordem_update(request, pk):
     ordem = get_object_or_404(OrdemHorario, pk=pk)
     form = OrdemHorarioForm(request.POST or None, instance=ordem)
@@ -41,7 +41,7 @@ def ordem_update(request, pk):
     return render(request, "diario/ordem_horario/form.html", {"form": form, "titulo": "Editar Período"})
 
 
-@superadmin_required
+@admin_escola_required
 def ordem_delete(request, pk):
     ordem = get_object_or_404(OrdemHorario, pk=pk)
     if request.method == "POST":
@@ -59,7 +59,7 @@ def _normalizar_posicoes():
             OrdemHorario.objects.filter(pk=o.pk).update(posicao=i)
 
 
-@superadmin_required
+@admin_escola_required
 def ordem_mover(request, pk, direcao):
     """Move um período para cima ou para baixo trocando posições com o vizinho."""
     _normalizar_posicoes()
