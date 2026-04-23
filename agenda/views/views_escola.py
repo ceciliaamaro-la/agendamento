@@ -25,7 +25,7 @@ def escola_list(request):
 @superadmin_required
 def escola_nova(request):
     if request.method == 'POST':
-        form = EscolaForm(request.POST)
+        form = EscolaForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
             messages.success(request, 'Escola criada com sucesso!')
@@ -41,7 +41,7 @@ def escola_update(request, pk):
     if not pode_administrar_escola(request.user, escola):
         return HttpResponseForbidden("Sem permissão para editar esta escola.")
     if request.method == 'POST':
-        form = EscolaForm(request.POST, instance=escola)
+        form = EscolaForm(request.POST, request.FILES, instance=escola)
         if form.is_valid():
             form.save()
             messages.success(request, 'Escola atualizada com sucesso!')

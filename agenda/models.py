@@ -10,6 +10,13 @@ class Escola(models.Model):
         null=True
     )
 
+    logo = models.ImageField(
+        upload_to="escolas/logos/",
+        null=True, blank=True,
+        verbose_name="Logo da escola",
+        help_text="Imagem usada no cabeçalho de relatórios PDF.",
+    )
+
     criado_em = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

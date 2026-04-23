@@ -10,8 +10,15 @@
                     <h5 class="mb-0"><i class="bi bi-building"></i> {{ titulo }}</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post">
+                    <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
+                        {% if form.instance.logo %}
+                        <div class="mb-3 text-center">
+                            <img src="{{ form.instance.logo.url }}" alt="Logo atual"
+                                 class="img-fluid rounded shadow-sm" style="max-height:120px;">
+                            <div class="small text-muted mt-1">Logo atual</div>
+                        </div>
+                        {% endif %}
                         {% for field in form %}
                         <div class="mb-3">
                             <label class="form-label fw-semibold">{{ field.label }}</label>

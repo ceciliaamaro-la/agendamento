@@ -18,6 +18,7 @@ from .views import views_ordem_horario
 from .views import views_cascade
 from .views import views_monitoria
 from .views import views_professor_usuario
+from .views import views_relatorio
 
 app_name = 'cal'
 
@@ -127,6 +128,7 @@ urlpatterns = [
     path('diario/', views_aula.diario_list, name='diario_list'),
     path('diario/aula/<int:pk>/chamada/', views_aula.diario_chamada, name='diario_chamada'),
     path('diario/aula/<int:pk>/detalhe/', views_aula.diario_detail, name='diario_detail'),
+    path('diario/relatorio/', views_relatorio.relatorio_diario_pdf, name='diario_relatorio_pdf'),
 
     # ─── Monitorias ────────────────────────────────────────────────────────────
     path('monitorias/', views_monitoria.monitoria_programacao, name='monitoria_programacao'),

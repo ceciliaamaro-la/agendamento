@@ -9,8 +9,8 @@
     </a>
   </div>
 
-  <!-- Filtro por turma -->
-  <form method="get" class="d-flex gap-2 mb-4 align-items-center">
+  <!-- Filtros e relatório -->
+  <form method="get" class="d-flex flex-wrap gap-2 mb-4 align-items-center">
     <select name="turma" class="form-select form-select-sm" style="max-width:240px">
       <option value="">Todas as turmas</option>
       {% for t in turmas %}
@@ -21,7 +21,31 @@
     </select>
     <button type="submit" class="btn btn-outline-primary btn-sm">Filtrar</button>
     {% if turma_filtro %}<a href="{% url 'cal:diario_list' %}" class="btn btn-outline-secondary btn-sm">Limpar</a>{% endif %}
+
+    <span class="vr d-none d-md-inline mx-1"></span>
+
+    <label for="data_relatorio" class="small text-muted mb-0">Relatório do dia:</label>
+    <input type="date" id="data_relatorio" class="form-control form-control-sm" style="max-width:170px">
+    <a id="btn_relatorio" target="_blank" class="btn btn-sm btn-danger">
+      <i class="bi bi-file-earmark-pdf"></i> Gerar PDF
+    </a>
   </form>
+
+  <script>
+    (function () {
+      var inp = document.getElementById('data_relatorio');
+      var btn = document.getElementById('btn_relatorio');
+      var hoje = new Date().toISOString().slice(0, 10);
+      inp.value = hoje;
+      function atualizar() {
+        var url = "{% url 'cal:diario_relatorio_pdf' %}?data=" + inp.value;
+        {% if turma_filtro %}url += "&turma={{ turma_filtro }}";{% endif %}
+        btn.href = url;
+      }
+      inp.addEventListener('change', atualizar);
+      atualizar();
+    })();
+  </script>
 
   {% if tem_aulas %}
     {% for escola, turmas_dict in aulas_por_escola.items %}

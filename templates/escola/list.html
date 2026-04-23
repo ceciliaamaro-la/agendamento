@@ -16,6 +16,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>#</th>
+                        <th style="width:70px">Logo</th>
                         <th>Nome da Escola</th>
                         <th>Criado em</th>
                         <th class="text-center">Ações</th>
@@ -25,6 +26,14 @@
                     {% for escola in escolas %}
                     <tr>
                         <td class="text-muted small">{{ escola.pk }}</td>
+                        <td>
+                            {% if escola.logo %}
+                                <img src="{{ escola.logo.url }}" alt="logo"
+                                     style="height:36px;width:auto;border-radius:4px;">
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
                         <td><strong>{{ escola.nome_escola }}</strong></td>
                         <td class="text-muted small">{{ escola.criado_em|date:"d/m/Y" }}</td>
                         <td class="text-center">

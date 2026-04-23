@@ -229,7 +229,7 @@ class EscolaForm(forms.ModelForm):
 
     class Meta:
         model = Escola
-        fields = ["nome_escola"]
+        fields = ["nome_escola", "logo"]
         widgets = {
             "nome_escola": forms.TextInput(
                 attrs={
@@ -238,8 +238,11 @@ class EscolaForm(forms.ModelForm):
                     "style": "border-radius:10px;"
                 }
             ),
+            "logo": forms.ClearableFileInput(
+                attrs={"class": "form-control shadow-sm", "accept": "image/*"}
+            ),
         }
-        labels = {"nome_escola": "Nome da Escola"}
+        labels = {"nome_escola": "Nome da Escola", "logo": "Logo (PNG/JPG)"}
 
 
 # ===============================
