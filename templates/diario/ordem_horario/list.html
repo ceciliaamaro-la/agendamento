@@ -18,6 +18,7 @@
             <th>Nome</th>
             <th>Início</th>
             <th>Término</th>
+            <th class="text-center" style="width:80px">Ordem</th>
             <th class="text-center" style="width:110px">Ações</th>
           </tr>
         </thead>
@@ -29,6 +30,22 @@
             <td>{{ o.inicio|default:"—" }}</td>
             <td>{{ o.termino|default:"—" }}</td>
             <td class="text-center text-nowrap">
+              {% if not forloop.first %}
+                <a href="{% url 'cal:ordem_mover' o.pk 'cima' %}" class="btn btn-sm btn-outline-secondary" title="Mover para cima">
+                  <i class="bi bi-arrow-up"></i>
+                </a>
+              {% else %}
+                <button class="btn btn-sm btn-outline-secondary" disabled><i class="bi bi-arrow-up"></i></button>
+              {% endif %}
+              {% if not forloop.last %}
+                <a href="{% url 'cal:ordem_mover' o.pk 'baixo' %}" class="btn btn-sm btn-outline-secondary" title="Mover para baixo">
+                  <i class="bi bi-arrow-down"></i>
+                </a>
+              {% else %}
+                <button class="btn btn-sm btn-outline-secondary" disabled><i class="bi bi-arrow-down"></i></button>
+              {% endif %}
+            </td>
+            <td class="text-center text-nowrap">
               <a href="{% url 'cal:ordem_update' o.pk %}" class="btn btn-sm btn-warning me-1">
                 <i class="bi bi-pencil"></i>
               </a>
@@ -39,7 +56,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="5" class="text-center text-muted py-4">Nenhum período cadastrado.</td>
+            <td colspan="6" class="text-center text-muted py-4">Nenhum período cadastrado.</td>
           </tr>
           {% endfor %}
         </tbody>

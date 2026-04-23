@@ -49,3 +49,27 @@ def ordem_delete(request, pk):
         messages.success(request, "Período excluído.")
         return redirect("cal:ordem_list")
     return render(request, "diario/ordem_horario/confirm_delete.html", {"obj": ordem, "titulo": "Excluir Período"})
+
+
+def _normalizar_posicoes():
+    """Garante que todos os períodos tenham posições sequenciais 1..N
+    respeitando a ordem atual (posicao, id)."""
+    for i, o in enumerate(OrdemHorario.objects.order_by("posicao", "id"), start=1):
+        if o.posicao != i:
+            OrdemHorario.objects.filter(pk=o.pk).update(posicao=i)
+
+
+@superadmin_required
+def ordem_mover(request, pk, direcao):
+    """Move um período para cima ou para baixo trocando posições com o vizinho."""
+    _normalizar_posicoes()
+    ordem = get_object_or_404(OrdemHorario, pk=pk)
+    if direcao == "cima":
+        vizinho = OrdemHorario.objects.filter(posicao__lt=ordem.posicao).order_by("-posicao").first()
+    else:
+        vizinho = OrdemHorario.objects.filter(posicao__gt=ordem.posicao).order_by("posicao").first()
+    if vizinho:
+        p1, p2 = ordem.posicao, vizinho.posicao
+        OrdemHorario.objects.filter(pk=ordem.pk).update(posicao=p2)
+        OrdemHorario.objects.filter(pk=vizinho.pk).update(posicao=p1)
+    return redirect("cal:ordem_list")

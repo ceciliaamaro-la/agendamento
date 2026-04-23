@@ -90,6 +90,7 @@ urlpatterns = [
     path('periodos/novo/', views_ordem_horario.ordem_create, name='ordem_create'),
     path('periodos/<int:pk>/editar/', views_ordem_horario.ordem_update, name='ordem_update'),
     path('periodos/<int:pk>/excluir/', views_ordem_horario.ordem_delete, name='ordem_delete'),
+    path('periodos/<int:pk>/mover/<str:direcao>/', views_ordem_horario.ordem_mover, name='ordem_mover'),
 
     # ─── Matérias ──────────────────────────────────────────────────────────────
     path('materias/', views_materia.materia_list, name='materia_list'),
