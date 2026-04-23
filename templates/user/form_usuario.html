@@ -3,11 +3,15 @@
 {% block content %}
 <div class="container mt-4">
   <div class="row">
-    <div class="{% if titulo == 'Meu Perfil' %}col-lg-7{% else %}col-lg-9 mx-auto{% endif %} mb-4">
+    <div class="col-lg-9 mx-auto mb-4">
       <div class="card shadow border-0">
         <div class="card-header bg-primary text-white py-3 d-flex align-items-center justify-content-between">
           <h5 class="mb-0"><i class="bi bi-person-gear"></i> {{ titulo }}</h5>
+          {% if titulo != 'Meu Perfil' %}
           <a href="{% url 'cal:listar_usuarios' %}" class="btn btn-sm btn-light"><i class="bi bi-arrow-left"></i> Voltar</a>
+          {% else %}
+          <a href="{% url 'cal:home' %}" class="btn btn-sm btn-light"><i class="bi bi-arrow-left"></i> Voltar</a>
+          {% endif %}
         </div>
         <div class="card-body p-4">
           <form method="post" novalidate>{% csrf_token %}
@@ -25,26 +29,59 @@
               {% endif %}{% endfor %}
             </div>
 
-            {# ── Senha ─────────────────────────────────── #}
-            {% if form.password or form.nova_senha %}
+            {# ── Senha (form do tipo ResetPassword OU bloco do Perfil) ─────────────── #}
+            {% if form.password or form.nova_senha or titulo == 'Meu Perfil' %}
             <hr class="my-4">
-            <h6 class="text-uppercase text-muted small fw-bold mb-3"><i class="bi bi-shield-lock me-1"></i>Senha</h6>
-            <div class="row g-3">
-              {% for field in form %}{% if field.name == 'password' or field.name == 'nova_senha' or field.name == 'confirmar_senha' %}
+            <h6 class="text-uppercase text-muted small fw-bold mb-3">
+              <i class="bi bi-shield-lock me-1"></i>
+              {% if titulo == 'Meu Perfil' %}Alterar senha (opcional){% else %}Senha{% endif %}
+            </h6>
+
+            {% if titulo == 'Meu Perfil' %}
+              {# Campos manuais para o perfil — sem critérios, com botão de mostrar #}
+              <div class="row g-3">
                 <div class="col-md-6">
-                  <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  <label class="form-label fw-semibold" for="id_nova_senha">Nova senha</label>
                   <div class="input-group">
-                    {{ field }}
+                    <input type="password" name="nova_senha" id="id_nova_senha"
+                           class="form-control" autocomplete="new-password">
                     <button type="button" class="btn btn-outline-secondary toggle-password" tabindex="-1"
-                            data-target="{{ field.id_for_label }}" title="Mostrar/ocultar senha">
+                            data-target="id_nova_senha" title="Mostrar/ocultar senha">
                       <i class="bi bi-eye"></i>
                     </button>
                   </div>
-                  {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-                  {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                  <div class="form-text">Deixe em branco para manter a senha atual.</div>
                 </div>
-              {% endif %}{% endfor %}
-            </div>
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold" for="id_confirmar_senha">Confirmar nova senha</label>
+                  <div class="input-group">
+                    <input type="password" name="confirmar_senha" id="id_confirmar_senha"
+                           class="form-control" autocomplete="new-password">
+                    <button type="button" class="btn btn-outline-secondary toggle-password" tabindex="-1"
+                            data-target="id_confirmar_senha" title="Mostrar/ocultar senha">
+                      <i class="bi bi-eye"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            {% else %}
+              {# Form do tipo ResetPassword/UsuarioForm — renderiza campos do form #}
+              <div class="row g-3">
+                {% for field in form %}{% if field.name == 'password' or field.name == 'nova_senha' or field.name == 'confirmar_senha' %}
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    <div class="input-group">
+                      {{ field }}
+                      <button type="button" class="btn btn-outline-secondary toggle-password" tabindex="-1"
+                              data-target="{{ field.id_for_label }}" title="Mostrar/ocultar senha">
+                        <i class="bi bi-eye"></i>
+                      </button>
+                    </div>
+                    {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                  </div>
+                {% endif %}{% endfor %}
+              </div>
+            {% endif %}
             {% endif %}
 
             {# ── Perfil / Vínculos ─────────────────────── #}
@@ -92,7 +129,11 @@
             {% if form.non_field_errors %}<div class="alert alert-danger mt-3">{{ form.non_field_errors }}</div>{% endif %}
 
             <div class="d-flex gap-2 mt-4 justify-content-end">
-              <a href="{% url 'cal:listar_usuarios' %}" class="btn btn-outline-secondary">Cancelar</a>
+              {% if titulo == 'Meu Perfil' %}
+                <a href="{% url 'cal:home' %}" class="btn btn-outline-secondary">Cancelar</a>
+              {% else %}
+                <a href="{% url 'cal:listar_usuarios' %}" class="btn btn-outline-secondary">Cancelar</a>
+              {% endif %}
               <button type="submit" name="perfil_submit" class="btn btn-primary">
                 <i class="bi bi-check-circle"></i> Salvar
               </button>
@@ -101,33 +142,6 @@
         </div>
       </div>
     </div>
-
-    {% if titulo == 'Meu Perfil' %}
-    <div class="col-lg-5">
-      <div class="card shadow border-0">
-        <div class="card-header bg-dark text-white py-3">
-          <h5 class="mb-0"><i class="bi bi-shield-lock"></i> Alterar Senha</h5>
-        </div>
-        <div class="card-body p-4">
-          <form method="post">{% csrf_token %}
-            {% for field in password_form %}
-              <div class="mb-3">
-                <label class="form-label">{{ field.label }}</label>
-                <input type="{{ field.field.widget.input_type|default:'password' }}"
-                       name="{{ field.name }}"
-                       class="form-control {% if field.errors %}is-invalid{% endif %}">
-                {% if field.help_text %}<div class="form-text small text-muted">{{ field.help_text|safe }}</div>{% endif %}
-                {% for error in field.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
-              </div>
-            {% endfor %}
-            <button type="submit" name="password_submit" class="btn btn-dark w-100">
-              <i class="bi bi-key"></i> Atualizar Senha
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-    {% endif %}
   </div>
 </div>
 

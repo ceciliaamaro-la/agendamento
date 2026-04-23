@@ -29,28 +29,32 @@ def perfil_usuario(request):
         return f
 
     if request.method == 'POST':
-        if 'perfil_submit' in request.POST:
-            form = _build_form(request.POST, instance=request.user)
-            password_form = PasswordChangeForm(request.user)
-            if form.is_valid():
-                form.save()
-                messages.success(request, 'Perfil atualizado com sucesso!')
-                return redirect('cal:perfil')
-        elif 'password_submit' in request.POST:
-            form = _build_form(instance=request.user)
-            password_form = PasswordChangeForm(request.user, request.POST)
-            if password_form.is_valid():
-                user = password_form.save()
+        form = _build_form(request.POST, instance=request.user)
+        nova_senha = (request.POST.get('nova_senha') or '').strip()
+        confirmar_senha = (request.POST.get('confirmar_senha') or '').strip()
+        senha_ok = True
+        senha_erro = None
+        if nova_senha or confirmar_senha:
+            if nova_senha != confirmar_senha:
+                senha_ok = False
+                senha_erro = 'As senhas não coincidem.'
+        if form.is_valid() and senha_ok:
+            user = form.save()
+            if nova_senha:
+                user.set_password(nova_senha)
+                user.save()
                 update_session_auth_hash(request, user)
-                messages.success(request, 'Senha alterada com sucesso!')
-                return redirect('cal:perfil')
+                messages.success(request, 'Perfil e senha atualizados com sucesso!')
+            else:
+                messages.success(request, 'Perfil atualizado com sucesso!')
+            return redirect('cal:perfil')
+        if senha_erro:
+            messages.error(request, senha_erro)
     else:
         form = _build_form(instance=request.user)
-        password_form = PasswordChangeForm(request.user)
 
     return render(request, 'user/form_usuario.html', {
         'form': form,
-        'password_form': password_form,
         'titulo': 'Meu Perfil'
     })
 
