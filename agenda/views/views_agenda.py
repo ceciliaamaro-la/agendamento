@@ -28,11 +28,23 @@ def _evento_ou_403(request, pk):
 
 @login_required
 def agenda_list(request):
+    turma_id = request.GET.get("turma")
     agendas = eventos_do_usuario(request.user).select_related(
         'turma', 'turma__escola', 'escola', 'professor', 'materia'
-    ).order_by('turma__escola__nome_escola', 'turma__nome_turma', '-inicio', '-data')
+    )
+    if turma_id:
+        agendas = agendas.filter(turma_id=turma_id)
+    agendas = agendas.order_by(
+        'turma__escola__nome_escola', 'turma__nome_turma', '-inicio', '-data'
+    )
+    from ..services.escopo import turmas_do_usuario
+    turmas = turmas_do_usuario(request.user).select_related("escola").order_by(
+        "escola__nome_escola", "nome_turma"
+    )
     return render(request, 'agenda/list.html', {
         'agendas': agendas,
+        'turmas': turmas,
+        'turma_filtro': turma_id,
         'pode_criar': is_admin_escola(request.user) or is_professor(request.user),
     })
 

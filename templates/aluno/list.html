@@ -35,7 +35,7 @@
                     <tr>
                         <th>#</th>
                         <th>Nome</th>
-                        <th>Telefone (WhatsApp)</th>
+                        {% if is_admin_escola %}<th>Telefone (WhatsApp)</th>{% endif %}
                         <th>Usuários vinculados</th>
                         <th>Criado em</th>
                         {% if pode_admin %}<th class="text-center">Ações</th>{% endif %}
@@ -46,6 +46,7 @@
                     <tr>
                         <td class="text-muted small">{{ aluno.pk }}</td>
                         <td><strong>{{ aluno.nome_aluno }}</strong></td>
+                        {% if is_admin_escola %}
                         <td>
                             {% if aluno.telefone %}
                                 <span class="d-flex align-items-center gap-1">
@@ -56,6 +57,7 @@
                                 <span class="text-muted small">—</span>
                             {% endif %}
                         </td>
+                        {% endif %}
                         <td>
                             {% for u in aluno.usuarios.all %}
                                 <span class="badge bg-secondary me-1">{{ u.username }}</span>
