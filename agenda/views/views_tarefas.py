@@ -24,6 +24,12 @@ def listar_tarefas(request):
     Window: first day of current month → end of next month.
     Filters on the local Brasília date to avoid UTC boundary issues.
     """
+    from django.shortcuts import redirect
+    from ..services.escopo import is_professor, is_admin_escola
+    # Professores e admins não usam essa tela; redirecionam para /aulas/
+    if is_professor(request.user) or is_admin_escola(request.user):
+        return redirect('cal:aula_list')
+
     alunos_do_usuario = Aluno.objects.filter(
         usuarios=request.user
     ).select_related('turma').order_by('nome_aluno')

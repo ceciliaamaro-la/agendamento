@@ -9,13 +9,19 @@ from django.contrib import messages
 
 from ..models import Materia
 from ..forms import MateriaForm
-from ..services.escopo import admin_escola_required, superadmin_required
+from ..services.escopo import (
+    admin_escola_required, superadmin_required, bloquear_alunos_responsaveis,
+    is_superadmin,
+)
 
 
-@admin_escola_required
+@bloquear_alunos_responsaveis
 def materia_list(request):
     materias = Materia.objects.all().order_by("nome_materia")
-    return render(request, "diario/materia/list.html", {"materias": materias})
+    return render(request, "diario/materia/list.html", {
+        "materias": materias,
+        "pode_admin": is_superadmin(request.user),
+    })
 
 
 @superadmin_required

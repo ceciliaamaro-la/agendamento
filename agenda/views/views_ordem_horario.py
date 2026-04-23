@@ -5,13 +5,19 @@ from django.contrib import messages
 
 from ..models import OrdemHorario
 from ..forms import OrdemHorarioForm
-from ..services.escopo import admin_escola_required, superadmin_required
+from ..services.escopo import (
+    admin_escola_required, superadmin_required, bloquear_alunos_responsaveis,
+    is_superadmin,
+)
 
 
-@admin_escola_required
+@bloquear_alunos_responsaveis
 def ordem_list(request):
     ordens = OrdemHorario.objects.all()
-    return render(request, "diario/ordem_horario/list.html", {"ordens": ordens})
+    return render(request, "diario/ordem_horario/list.html", {
+        "ordens": ordens,
+        "pode_admin": is_superadmin(request.user),
+    })
 
 
 @superadmin_required

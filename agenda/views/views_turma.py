@@ -4,18 +4,22 @@ from django.http import HttpResponseForbidden
 
 from ..models import Turma
 from ..forms import TurmaForm
+from django.contrib.auth.decorators import login_required
 from ..services.escopo import (
     admin_escola_required, filtrar_por_escola, pode_administrar_escola,
+    turmas_do_usuario, is_admin_escola,
 )
 
 
-@admin_escola_required
+@login_required
 def turma_list(request):
-    turmas = filtrar_por_escola(
-        Turma.objects.select_related('escola').all(),
-        request.user,
-    ).order_by("escola__nome_escola", "nome_turma")
-    return render(request, 'turma/list.html', {'turmas': turmas})
+    turmas = turmas_do_usuario(request.user).select_related('escola').order_by(
+        "escola__nome_escola", "nome_turma"
+    )
+    return render(request, 'turma/list.html', {
+        'turmas': turmas,
+        'pode_admin': is_admin_escola(request.user),
+    })
 
 
 def _form_com_escopo(request, instance=None):

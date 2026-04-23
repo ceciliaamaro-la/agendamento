@@ -21,7 +21,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 
 from ..models import (
-    Escola, Turma, Professor, Materia, Livro, Aula, PerfilUsuario,
+    Escola, Turma, Professor, Materia, Livro, Aula, Aluno, AgendaEvento,
+    Horario, PerfilUsuario,
 )
 
 
@@ -88,6 +89,42 @@ def professor_do_usuario(user):
     """Retorna o Professor vinculado (ou None)."""
     perfil = _perfil(user)
     return perfil.professor_vinculado if perfil else None
+
+
+# ── Helpers para Aluno / Responsável / Professor (escopo pedagógico) ───────
+
+def alunos_do_consumidor(user):
+    """Alunos vinculados ao usuário (próprio aluno OU filhos do responsável)."""
+    if user is None or not user.is_authenticated:
+        return Aluno.objects.none()
+    return Aluno.objects.filter(usuarios=user).distinct()
+
+
+def turmas_do_aluno(user):
+    """Turmas dos alunos vinculados ao usuário (aluno ou responsável)."""
+    return Turma.objects.filter(alunos__usuarios=user).distinct()
+
+
+def turmas_do_professor(user):
+    """Turmas onde o professor leciona (via Horario)."""
+    prof = professor_do_usuario(user)
+    if not prof:
+        return Turma.objects.none()
+    return Turma.objects.filter(horarios__professor=prof).distinct()
+
+
+def materias_do_professor(user):
+    """Matérias do professor (via Horario + matéria principal do Professor)."""
+    prof = professor_do_usuario(user)
+    if not prof:
+        return Materia.objects.none()
+    ids = set(
+        Horario.objects.filter(professor=prof)
+        .values_list("materia_id", flat=True)
+    )
+    if prof.materia_id:
+        ids.add(prof.materia_id)
+    return Materia.objects.filter(id__in=ids)
 
 
 # ── Escolas: visíveis vs administradas ─────────────────────────────────────
@@ -165,17 +202,28 @@ def aulas_do_usuario(user, base_qs=None):
 
     - superadmin → todas
     - admin_escola/coordenador → todas das escolas administradas
-    - professor → apenas as próprias
+    - professor → próprias OU das matérias/turmas onde leciona
+    - aluno/responsável → das turmas do(s) aluno(s) (somente leitura)
     - outros → nada
     """
+    from django.db.models import Q
     qs = base_qs if base_qs is not None else Aula.objects.all()
     if is_superadmin(user):
         return qs
     if is_admin_escola(user):
         return qs.filter(escola__in=escolas_administradas(user))
-    prof = professor_do_usuario(user)
-    if prof is not None:
-        return qs.filter(professor=prof)
+    if is_professor(user):
+        prof = professor_do_usuario(user)
+        if not prof:
+            return qs.none()
+        turmas_ids = list(turmas_do_professor(user).values_list("id", flat=True))
+        materias_ids = list(materias_do_professor(user).values_list("id", flat=True))
+        return qs.filter(
+            Q(professor=prof)
+            | (Q(turma_id__in=turmas_ids) & Q(materia_id__in=materias_ids))
+        ).distinct()
+    if is_aluno(user) or is_responsavel(user):
+        return qs.filter(turma__in=turmas_do_aluno(user))
     return qs.none()
 
 
@@ -185,8 +233,82 @@ def pode_editar_aula(user, aula):
         return True
     if is_admin_escola(user):
         return escolas_administradas(user).filter(pk=aula.escola_id).exists()
-    prof = professor_do_usuario(user)
-    return prof is not None and aula.professor_id == prof.id
+    if is_professor(user):
+        prof = professor_do_usuario(user)
+        if not prof:
+            return False
+        if aula.professor_id == prof.id:
+            return True
+        # Aulas das turmas/matérias dele
+        return Horario.objects.filter(
+            professor=prof, turma_id=aula.turma_id, materia_id=aula.materia_id
+        ).exists()
+    return False
+
+
+# ── Eventos da Agenda ──────────────────────────────────────────────────────
+
+def eventos_do_usuario(user, base_qs=None):
+    """Eventos visíveis ao usuário.
+
+    - superadmin → todos
+    - admin_escola/coordenador → das escolas administradas
+    - professor → tudo das escolas visíveis (leitura ampla)
+    - aluno/responsável → apenas das turmas vinculadas ao(s) aluno(s)
+    """
+    qs = base_qs if base_qs is not None else AgendaEvento.objects.all()
+    if is_superadmin(user):
+        return qs
+    if is_admin_escola(user):
+        return qs.filter(turma__escola__in=escolas_administradas(user))
+    if is_professor(user):
+        return qs.filter(turma__escola__in=escolas_do_usuario(user))
+    if is_aluno(user) or is_responsavel(user):
+        return qs.filter(turma__in=turmas_do_aluno(user))
+    return qs.none()
+
+
+def pode_editar_evento(user, evento):
+    """Quem pode editar/excluir um evento da agenda.
+
+    - superadmin/admin_escola → sim (dentro do escopo)
+    - professor → só os eventos manuais que ele criou (evento.professor == ele)
+    - aluno/responsável → não
+    """
+    if is_superadmin(user):
+        return True
+    if is_admin_escola(user):
+        escola_id = evento.escola_id or (evento.turma.escola_id if evento.turma_id else None)
+        if escola_id is None:
+            return True
+        return escolas_administradas(user).filter(pk=escola_id).exists()
+    if is_professor(user):
+        prof = professor_do_usuario(user)
+        return bool(prof and evento.professor_id == prof.id)
+    return False
+
+
+# ── Horários (visíveis em modo leitura para todos os logados) ──────────────
+
+def horarios_do_usuario(user, base_qs=None):
+    """Horários visíveis (leitura).
+
+    - superadmin → todos
+    - admin_escola/coordenador → das escolas administradas
+    - professor → todos das escolas visíveis
+    - aluno/responsável → apenas das turmas vinculadas
+    """
+    from .. import models as _m
+    qs = base_qs if base_qs is not None else _m.Horario.objects.all()
+    if is_superadmin(user):
+        return qs
+    if is_admin_escola(user):
+        return qs.filter(turma__escola__in=escolas_administradas(user))
+    if is_professor(user):
+        return qs.filter(turma__escola__in=escolas_do_usuario(user))
+    if is_aluno(user) or is_responsavel(user):
+        return qs.filter(turma__in=turmas_do_aluno(user))
+    return qs.none()
 
 
 # ── Form helpers ───────────────────────────────────────────────────────────
@@ -278,6 +400,28 @@ def superadmin_required(view_func):
     def wrapped(request, *args, **kwargs):
         if not is_superadmin(request.user):
             return _negar(request, "Esta área é restrita ao super-administrador.")
+        return view_func(request, *args, **kwargs)
+    return wrapped
+
+
+def bloquear_alunos_responsaveis(view_func):
+    """Bloqueia alunos e responsáveis (qualquer outro papel passa)."""
+    @wraps(view_func)
+    @login_required
+    def wrapped(request, *args, **kwargs):
+        if is_aluno(request.user) or is_responsavel(request.user):
+            return _negar(request, "Esta área é restrita à equipe pedagógica.")
+        return view_func(request, *args, **kwargs)
+    return wrapped
+
+
+def professor_ou_admin_required(view_func):
+    """Permite professor, coordenador, admin_escola e superadmin."""
+    @wraps(view_func)
+    @login_required
+    def wrapped(request, *args, **kwargs):
+        if not (is_professor(request.user) or is_admin_escola(request.user)):
+            return _negar(request, "Esta área é restrita a professores e administradores.")
         return view_func(request, *args, **kwargs)
     return wrapped
 

@@ -4,18 +4,21 @@ from django.http import HttpResponseForbidden
 
 from agenda.models import Escola
 from agenda.forms import EscolaForm
+from django.contrib.auth.decorators import login_required
 from agenda.services.escopo import (
     admin_escola_required, superadmin_required,
     escolas_administradas, pode_administrar_escola, is_superadmin,
+    is_admin_escola, escolas_do_usuario, bloquear_alunos_responsaveis,
 )
 
 
-@admin_escola_required
+@bloquear_alunos_responsaveis
 def escola_list(request):
-    escolas = escolas_administradas(request.user).order_by("nome_escola")
+    escolas = escolas_do_usuario(request.user).order_by("nome_escola")
     return render(request, 'escola/list.html', {
         'escolas': escolas,
         'pode_criar': is_superadmin(request.user),
+        'pode_admin': is_admin_escola(request.user),
     })
 
 

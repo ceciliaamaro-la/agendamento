@@ -7,23 +7,36 @@ from ..models import Monitoria, Escola, Dias
 from ..forms import MonitoriaForm
 from ..services.escopo import (
     admin_estrito_required, filtrar_por_escola, pode_administrar_escola,
-    escolas_administradas, is_superadmin, papel_de,
+    escolas_administradas, escolas_do_usuario, is_superadmin, papel_de,
+    is_admin_escola, is_professor, professor_do_usuario,
+    professor_ou_admin_required,
 )
 from ..models import PerfilUsuario
 
 
-def _pode_editar_monitoria(user):
-    return is_superadmin(user) or papel_de(user) == PerfilUsuario.PAPEL_ADMIN_ESCOLA
+def _pode_editar_monitoria(user, monitoria=None):
+    """admin_escola edita as da escola dele; professor só as próprias."""
+    if is_superadmin(user) or is_admin_escola(user):
+        if monitoria is None:
+            return True
+        return pode_administrar_escola(user, monitoria.escola)
+    if is_professor(user):
+        if monitoria is None:
+            return True
+        prof = professor_do_usuario(user)
+        return bool(prof and monitoria.professor_id == prof.id)
+    return False
 
 
 @login_required
 def monitoria_programacao(request):
     """Página pública (a todos os logados): exibe a programação no formato
     pivotado por professor × dia da semana, semelhante ao modelo da imagem."""
-    monitorias = filtrar_por_escola(
-        Monitoria.objects.filter(ativo=True)
-        .select_related("escola", "professor", "materia", "dia"),
-        request.user,
+    # Programação visível a TODOS os logados (alunos/responsáveis inclusive),
+    # restrita à(s) escola(s) visíveis.
+    monitorias = (
+        Monitoria.objects.filter(ativo=True, escola__in=escolas_do_usuario(request.user))
+        .select_related("escola", "professor", "materia", "dia")
     )
 
     dias = list(Dias.objects.all().order_by("ordem", "id"))
@@ -54,54 +67,73 @@ def monitoria_programacao(request):
     })
 
 
-@admin_estrito_required
+@professor_ou_admin_required
 def monitoria_list(request):
-    monitorias = filtrar_por_escola(
-        Monitoria.objects.select_related("escola", "professor", "materia", "dia").all(),
-        request.user,
-    )
-    return render(request, "diario/monitoria/list.html", {"monitorias": monitorias})
+    base = Monitoria.objects.select_related("escola", "professor", "materia", "dia").all()
+    if is_admin_escola(request.user):
+        monitorias = filtrar_por_escola(base, request.user)
+    else:
+        prof = professor_do_usuario(request.user)
+        monitorias = base.filter(professor=prof) if prof else base.none()
+    return render(request, "diario/monitoria/list.html", {
+        "monitorias": monitorias,
+        "pode_admin_geral": is_admin_escola(request.user),
+    })
 
 
 def _form_com_escopo(request, instance=None):
     form = MonitoriaForm(request.POST or None, instance=instance)
-    form.fields["escola"].queryset = escolas_administradas(request.user)
+    if is_admin_escola(request.user):
+        form.fields["escola"].queryset = escolas_administradas(request.user)
+    else:
+        # professor: limita escola e professor às próprias
+        form.fields["escola"].queryset = escolas_do_usuario(request.user)
+        prof = professor_do_usuario(request.user)
+        if prof:
+            from ..models import Professor as _P
+            form.fields["professor"].queryset = _P.objects.filter(pk=prof.pk)
+            form.fields["professor"].initial = prof
+            form.fields["professor"].disabled = True
     return form
 
 
-@admin_estrito_required
+@professor_ou_admin_required
 def monitoria_create(request):
     form = _form_com_escopo(request)
     if request.method == "POST" and form.is_valid():
         obj = form.save(commit=False)
-        if not pode_administrar_escola(request.user, obj.escola):
-            return HttpResponseForbidden("Sem permissão para esta escola.")
+        if is_professor(request.user) and not is_admin_escola(request.user):
+            obj.professor = professor_do_usuario(request.user)
+        if not _pode_editar_monitoria(request.user, obj):
+            return HttpResponseForbidden("Sem permissão para esta monitoria.")
         obj.save()
         messages.success(request, "Monitoria cadastrada.")
         return redirect("cal:monitoria_list")
     return render(request, "diario/monitoria/form.html", {"form": form, "titulo": "Nova Monitoria"})
 
 
-@admin_estrito_required
+@professor_ou_admin_required
 def monitoria_update(request, pk):
     obj = get_object_or_404(Monitoria, pk=pk)
-    if not pode_administrar_escola(request.user, obj.escola):
+    if not _pode_editar_monitoria(request.user, obj):
         return HttpResponseForbidden("Sem permissão.")
     form = _form_com_escopo(request, instance=obj)
     if request.method == "POST" and form.is_valid():
         novo = form.save(commit=False)
-        if not pode_administrar_escola(request.user, novo.escola):
-            return HttpResponseForbidden("Escola fora do seu escopo.")
+        if is_professor(request.user) and not is_admin_escola(request.user):
+            novo.professor = professor_do_usuario(request.user)
+        if not _pode_editar_monitoria(request.user, novo):
+            return HttpResponseForbidden("Escola/professor fora do seu escopo.")
         novo.save()
         messages.success(request, "Monitoria atualizada.")
         return redirect("cal:monitoria_list")
     return render(request, "diario/monitoria/form.html", {"form": form, "titulo": "Editar Monitoria"})
 
 
-@admin_estrito_required
+@professor_ou_admin_required
 def monitoria_delete(request, pk):
     obj = get_object_or_404(Monitoria, pk=pk)
-    if not pode_administrar_escola(request.user, obj.escola):
+    if not _pode_editar_monitoria(request.user, obj):
         return HttpResponseForbidden("Sem permissão.")
     if request.method == "POST":
         obj.delete()

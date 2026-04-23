@@ -4,20 +4,35 @@ from django.http import HttpResponseForbidden
 
 from ..models import Aluno
 from ..forms import AlunoForm
+from django.contrib.auth.decorators import login_required
 from ..services.escopo import (
     admin_escola_required, filtrar_por_escola, pode_administrar_escola,
-    turmas_do_usuario, escolas_administradas,
+    turmas_do_usuario, escolas_administradas, is_admin_escola, is_professor,
+    is_aluno, is_responsavel, turmas_do_professor, alunos_do_consumidor,
 )
 
 
-@admin_escola_required
+@login_required
 def aluno_list(request):
-    alunos = filtrar_por_escola(
-        Aluno.objects.select_related('turma', 'turma__escola').prefetch_related('usuarios'),
-        request.user,
-        escola_lookup='turma__escola',
-    ).order_by('turma__escola__nome_escola', 'turma__nome_turma', 'nome_aluno')
-    return render(request, 'aluno/list.html', {'alunos': alunos})
+    if is_aluno(request.user):
+        from django.shortcuts import redirect as _r
+        from django.contrib import messages as _m
+        _m.error(request, "Alunos não acessam a lista geral. Acesse 'Minhas Tarefas'.")
+        return _r('cal:home')
+    base = Aluno.objects.select_related('turma', 'turma__escola').prefetch_related('usuarios')
+    if is_admin_escola(request.user):
+        alunos = filtrar_por_escola(base, request.user, escola_lookup='turma__escola')
+    elif is_professor(request.user):
+        alunos = base.filter(turma__in=turmas_do_professor(request.user))
+    elif is_responsavel(request.user):
+        alunos = base.filter(usuarios=request.user)
+    else:
+        alunos = base.none()
+    alunos = alunos.order_by('turma__escola__nome_escola', 'turma__nome_turma', 'nome_aluno')
+    return render(request, 'aluno/list.html', {
+        'alunos': alunos,
+        'pode_admin': is_admin_escola(request.user),
+    })
 
 
 def _form_com_escopo(request, instance=None):

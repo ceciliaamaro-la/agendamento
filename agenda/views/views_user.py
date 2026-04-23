@@ -2,6 +2,7 @@ from django.urls import reverse_lazy
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
 from ..forms import UsuarioForm, UsuarioUpdateForm, UsuarioPasswordResetForm
+from ..models import PerfilUsuario
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
@@ -46,13 +47,15 @@ def perfil_usuario(request):
 
 @login_required
 def editar_usuario(request, user_id):
-    if not request.user.is_staff and request.user.id != user_id:
+    from ..services.escopo import is_admin_escola, is_coordenador
+    eh_admin = is_admin_escola(request.user) and not is_coordenador(request.user)
+    if not eh_admin and request.user.id != user_id:
         messages.error(request, 'Você não tem permissão para editar este perfil.')
         return redirect('cal:home')
 
     usuario = get_object_or_404(User, id=user_id)
-    # Auto-edição: usa form simples; admin/staff: usa form completo (User+Perfil)
-    if request.user.is_staff or request.user.is_superuser:
+    # Auto-edição: form simples; admin/superadmin (não coord): form completo
+    if eh_admin:
         FormClass = UsuarioForm
         kwargs = {"instance": usuario, "request_user": request.user}
     else:
@@ -64,7 +67,7 @@ def editar_usuario(request, user_id):
         if form.is_valid():
             form.save()
             messages.success(request, 'Usuário atualizado com sucesso!')
-            if request.user.is_staff:
+            if eh_admin:
                 return redirect('cal:listar_usuarios')
             return redirect('cal:perfil')
     else:
@@ -75,11 +78,16 @@ def editar_usuario(request, user_id):
 @login_required
 def listar_usuarios(request):
     from ..services.escopo import (
-        is_admin_escola, is_superadmin, escolas_administradas,
+        is_admin_escola, is_superadmin, is_coordenador, escolas_administradas,
+        papel_de,
     )
-    if not is_admin_escola(request.user):
+    perfil_papel = papel_de(request.user)
+    if not (is_admin_escola(request.user)):
+        # admin_escola_required já cobre coordenador? Sim.
         messages.error(request, 'Você não tem permissão para acessar esta página.')
         return redirect('cal:home')
+    # Coordenador: somente leitura (sem botões de criar/editar/excluir)
+    eh_coordenador = (perfil_papel == PerfilUsuario.PAPEL_COORDENADOR)
     usuarios = (
         User.objects
         .select_related('perfil', 'perfil__escola', 'perfil__professor_vinculado')
@@ -94,7 +102,18 @@ def listar_usuarios(request):
         )
         usuarios = usuarios.distinct()
     usuarios = usuarios.order_by('username')
-    return render(request, 'user/listar.html', {'usuarios': usuarios})
+    return render(request, 'user/listar.html', {
+        'usuarios': usuarios,
+        'pode_admin': not eh_coordenador,
+    })
+
+
+def _bloquear_coordenador_escrita(request):
+    from ..services.escopo import is_coordenador
+    if is_coordenador(request.user):
+        messages.error(request, 'Coordenador tem acesso somente leitura aos usuários.')
+        return redirect('cal:listar_usuarios')
+    return None
 
 
 @login_required
@@ -103,6 +122,8 @@ def adicionar_usuario(request):
     if not is_admin_escola(request.user):
         messages.error(request, 'Sem permissão.')
         return redirect('cal:home')
+    bloqueio = _bloquear_coordenador_escrita(request)
+    if bloqueio: return bloqueio
     if request.method == 'POST':
         form = UsuarioForm(request.POST, request_user=request.user)
         if form.is_valid():
@@ -120,6 +141,8 @@ def excluir_usuario(request, user_id):
     if not is_admin_escola(request.user):
         messages.error(request, 'Sem permissão.')
         return redirect('cal:home')
+    bloqueio = _bloquear_coordenador_escrita(request)
+    if bloqueio: return bloqueio
     if request.user.id == user_id:
         messages.error(request, 'Você não pode excluir sua própria conta!')
         return redirect('cal:listar_usuarios')
@@ -137,6 +160,8 @@ def resetar_senha(request, user_id):
     if not is_admin_escola(request.user):
         messages.error(request, 'Sem permissão.')
         return redirect('cal:home')
+    bloqueio = _bloquear_coordenador_escrita(request)
+    if bloqueio: return bloqueio
     usuario = get_object_or_404(User, id=user_id)
     if request.method == 'POST':
         form = UsuarioPasswordResetForm(request.POST)
@@ -156,6 +181,8 @@ def desativar_usuario(request, user_id):
     if not is_admin_escola(request.user):
         messages.error(request, 'Sem permissão.')
         return redirect('cal:home')
+    bloqueio = _bloquear_coordenador_escrita(request)
+    if bloqueio: return bloqueio
     if request.method != 'POST':
         messages.error(request, 'Ação inválida.')
         return redirect('cal:listar_usuarios')
@@ -172,8 +199,9 @@ def home(request):
     from django.db.models import Count
     from ..models import Aula, AgendaEvento
     from ..services.escopo import (
-        is_admin_escola, is_superadmin, professor_do_usuario,
-        aulas_do_usuario, escolas_administradas,
+        is_admin_escola, is_superadmin, is_professor, is_aluno, is_responsavel,
+        professor_do_usuario, aulas_do_usuario, eventos_do_usuario,
+        alunos_do_consumidor, turmas_do_aluno, escolas_administradas,
     )
 
     user = request.user
@@ -183,14 +211,46 @@ def home(request):
     super_admin = is_superadmin(user)
     professor = professor_do_usuario(user)
 
-    aulas_qs = aulas_do_usuario(user)
+    ctx = {
+        "is_admin": admin,
+        "is_superadmin": super_admin,
+        "professor": professor,
+        "hoje": hoje,
+    }
 
+    # ─── Aluno / Responsável ────────────────────────────────────────────
+    if is_aluno(user) or is_responsavel(user):
+        alunos = list(alunos_do_consumidor(user).select_related("turma", "turma__escola"))
+        turmas_ids = list(turmas_do_aluno(user).values_list("id", flat=True))
+        proximos = list(
+            AgendaEvento.objects.filter(turma_id__in=turmas_ids)
+            .filter(inicio__date__gte=hoje, inicio__date__lte=fim_semana)
+            .select_related("turma", "materia", "professor")
+            .order_by("inicio")[:8]
+        )
+        atrasados = list(
+            AgendaEvento.objects.filter(turma_id__in=turmas_ids, inicio__date__lt=hoje)
+            .order_by("-inicio")[:5]
+        )
+        ctx.update({
+            "papel": "aluno" if is_aluno(user) else "responsavel",
+            "alunos": alunos,
+            "proximos_eventos": proximos,
+            "eventos_atrasados": atrasados,
+            "stats": {
+                "proximos": len(proximos),
+                "alunos": len(alunos),
+            },
+        })
+        return render(request, 'home.html', ctx)
+
+    # ─── Professor / Admin / Coordenador ───────────────────────────────
+    aulas_qs = aulas_do_usuario(user)
     aulas_hoje = list(
         aulas_qs.filter(data_aula=hoje)
         .select_related("turma", "turma__escola", "materia")
         .order_by("turma__nome_turma")[:6]
     )
-
     deveres_proximos = list(
         aulas_qs.filter(
             data_entrega__isnull=False,
@@ -200,8 +260,6 @@ def home(request):
         .select_related("turma", "turma__escola", "materia")
         .order_by("data_entrega")[:6]
     )
-
-    # Aulas com data já passada (ou hoje) sem nenhum registro de chamada
     pendentes_chamada = list(
         aulas_qs.filter(data_aula__lte=hoje)
         .annotate(_n=Count("diario"))
@@ -210,7 +268,6 @@ def home(request):
         .order_by("-data_aula")[:6]
     )
 
-    # Estatísticas para os cards
     stats = {
         "aulas_hoje":       len(aulas_hoje),
         "deveres_semana":   len(deveres_proximos),
@@ -225,16 +282,14 @@ def home(request):
             stats["total_eventos"] = AgendaEvento.objects.filter(escola_id__in=escolas_ids).count()
             stats["total_aulas"]   = Aula.objects.filter(escola_id__in=escolas_ids).count()
 
-    return render(request, 'home.html', {
-        "is_admin": admin,
-        "is_superadmin": super_admin,
-        "professor": professor,
+    ctx.update({
+        "papel": "admin" if admin else ("professor" if is_professor(user) else "outro"),
         "aulas_hoje": aulas_hoje,
         "deveres_proximos": deveres_proximos,
         "pendentes_chamada": pendentes_chamada,
         "stats": stats,
-        "hoje": hoje,
     })
+    return render(request, 'home.html', ctx)
 
 
 def contato(request):

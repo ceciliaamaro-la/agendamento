@@ -4,19 +4,27 @@ from django.http import HttpResponseForbidden
 
 from ..models import Professor
 from ..forms import ProfessorForm
+from django.contrib.auth.decorators import login_required
 from ..services.escopo import (
     admin_escola_required, filtrar_por_escola, pode_administrar_escola,
-    escolas_administradas,
+    escolas_administradas, is_admin_escola, bloquear_alunos_responsaveis,
+    escolas_do_usuario,
 )
 
 
-@admin_escola_required
+@bloquear_alunos_responsaveis
 def professor_list(request):
-    professores = filtrar_por_escola(
-        Professor.objects.select_related("escola", "materia").all(),
-        request.user,
-    ).order_by("escola__nome_escola", "nome_professor")
-    return render(request, "diario/professor/list.html", {"professores": professores})
+    base = Professor.objects.select_related("escola", "materia").all()
+    if is_admin_escola(request.user):
+        professores = filtrar_por_escola(base, request.user)
+    else:
+        # Professor: lê todos das escolas visíveis
+        professores = base.filter(escola__in=escolas_do_usuario(request.user))
+    professores = professores.order_by("escola__nome_escola", "nome_professor")
+    return render(request, "diario/professor/list.html", {
+        "professores": professores,
+        "pode_admin": is_admin_escola(request.user),
+    })
 
 
 def _form_com_escopo(request, instance=None):

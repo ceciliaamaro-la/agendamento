@@ -8,19 +8,16 @@ from ..models import Horario, Turma, Dias, OrdemHorario
 from ..forms import HorarioForm
 from ..services.escopo import (
     admin_escola_required, filtrar_por_escola, pode_administrar_escola,
-    turmas_do_usuario, escolas_administradas,
+    turmas_do_usuario, escolas_administradas, horarios_do_usuario,
+    is_admin_escola,
 )
 
 
-@admin_escola_required
+@login_required
 def horario_list(request):
     turma_id = request.GET.get("turma")
-    qs = filtrar_por_escola(
-        Horario.objects.select_related(
-            "escola", "turma", "turma__escola", "dia", "ordem", "professor", "materia"
-        ),
-        request.user,
-        escola_lookup='turma__escola',
+    qs = horarios_do_usuario(request.user).select_related(
+        "escola", "turma", "turma__escola", "dia", "ordem", "professor", "materia"
     )
     if turma_id:
         qs = qs.filter(turma_id=turma_id)
@@ -62,6 +59,7 @@ def horario_list(request):
         "tem_horarios": qs.exists(),
         "turmas": turmas,
         "turma_filtro": turma_id,
+        "pode_admin": is_admin_escola(request.user),
     })
 
 

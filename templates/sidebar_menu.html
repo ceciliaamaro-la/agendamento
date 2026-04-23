@@ -13,13 +13,15 @@
         <span>Início</span>
     </a>
 
-    {# Tarefas: alunos e responsáveis (e qualquer um) acessam #}
+    {# Tarefas: alunos e responsáveis #}
+    {% if is_aluno or is_responsavel %}
     <a href="{% url 'cal:listar_tarefas' %}"
        class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
               {% if 'tarefas' in request.resolver_match.url_name|default:'' %}active{% endif %}">
         <i class="bi bi-journal-check fs-5"></i>
         <span>Minhas Tarefas</span>
     </a>
+    {% endif %}
 
     {# ── Diário Escolar (professor + admins) ──────────────────────────────── #}
     {% if is_professor or is_admin_escola %}
@@ -40,25 +42,13 @@
         <i class="bi bi-clipboard2-check fs-5"></i>
         <span>Chamada</span>
     </a>
-
-    <a href="{% url 'cal:horario_list' %}"
-       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
-              {% if 'horario' in request.resolver_match.url_name|default:'' %}active{% endif %}">
-        <i class="bi bi-clock fs-5"></i>
-        <span>Horários</span>
-    </a>
     {% endif %}
 
-    {# ── Monitorias: visível para todos os usuários logados ─────────────── #}
-    <a href="{% url 'cal:monitoria_programacao' %}"
-       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
-              {% if 'monitoria' in request.resolver_match.url_name|default:'' %}active{% endif %}">
-        <i class="bi bi-mortarboard-fill fs-5"></i>
-        <span>Monitorias</span>
-    </a>
+    {# ── Calendário & Horários (todos os logados, com escopos diferentes) ── #}
+    <div class="px-3 pt-3 pb-1">
+        <span class="text-uppercase text-secondary" style="font-size:.7rem;letter-spacing:.08em;">Calendário</span>
+    </div>
 
-    {# ── Eventos / Cadastros (admin_escola e superadmin) ─────────────────── #}
-    {% if is_admin_escola %}
     <a href="{% url 'cal:agenda_list' %}"
        class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
               {% if 'agenda' in request.resolver_match.url_name|default:'' %}active{% endif %}">
@@ -66,6 +56,22 @@
         <span>Eventos</span>
     </a>
 
+    <a href="{% url 'cal:horario_list' %}"
+       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
+              {% if 'horario' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <i class="bi bi-clock fs-5"></i>
+        <span>Horários</span>
+    </a>
+
+    <a href="{% url 'cal:monitoria_programacao' %}"
+       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
+              {% if 'monitoria' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <i class="bi bi-mortarboard-fill fs-5"></i>
+        <span>Monitorias</span>
+    </a>
+
+    {# ── Cadastros (todos exceto aluno/responsável) ────────────────────────── #}
+    {% if is_professor or is_admin_escola %}
     <div class="px-3 pt-3 pb-1">
         <span class="text-uppercase text-secondary" style="font-size:.7rem;letter-spacing:.08em;">Cadastros</span>
     </div>
@@ -102,7 +108,7 @@
        class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
               {% if 'vinculo' in request.resolver_match.url_name|default:'' %}active{% endif %}">
         <i class="bi bi-link-45deg fs-5"></i>
-        <span>Vínculos Professor↔Usuário</span>
+        <span>{% if is_admin_escola %}Vínculos Professor{% else %}Meu Vínculo{% endif %}</span>
     </a>
 
     <a href="{% url 'cal:livro_list' %}"
@@ -111,19 +117,15 @@
         <i class="bi bi-journal-bookmark fs-5"></i>
         <span>Livros</span>
     </a>
+    {% endif %}
 
+    {# ── Conexões (apenas admin_escola/superadmin) ───────────────────────── #}
+    {% if is_admin_escola %}
     <a href="{% url 'cal:conexao_list' %}"
        class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
               {% if 'conexao' in request.resolver_match.url_name|default:'' %}active{% endif %}">
-        <i class="bi bi-link-45deg fs-5"></i>
+        <i class="bi bi-plug-fill fs-5"></i>
         <span>Conexões</span>
-    </a>
-
-    <a href="{% url 'cal:whats_list' %}"
-       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
-              {% if 'whats' in request.resolver_match.url_name|default:'' %}active{% endif %}">
-        <i class="bi bi-whatsapp fs-5"></i>
-        <span>WhatsApp</span>
     </a>
     {% endif %}
 
@@ -158,7 +160,7 @@
        class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
               {% if 'usuario' in request.resolver_match.url_name|default:'' %}active{% endif %}">
         <i class="bi bi-person-gear fs-5"></i>
-        <span>Usuários</span>
+        <span>Usuários{% if is_coordenador %} <small class="text-secondary">(leitura)</small>{% endif %}</span>
     </a>
     {% endif %}
 

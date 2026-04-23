@@ -6,17 +6,31 @@ from django.http import HttpResponseForbidden
 
 from ..models import ProfessorUsuario, Professor
 from ..forms import ProfessorUsuarioForm
+from django.contrib.auth.decorators import login_required
 from ..services.escopo import (
     admin_escola_required, filtrar_por_escola, pode_administrar_escola,
+    is_admin_escola, is_professor, professor_do_usuario,
+    professor_ou_admin_required,
 )
 
 
-@admin_escola_required
+@professor_ou_admin_required
 def vinculo_list(request):
     qs = ProfessorUsuario.objects.select_related("professor", "professor__escola", "usuario").all()
-    professores_visiveis = filtrar_por_escola(Professor.objects.all(), request.user)
-    qs = qs.filter(professor__in=professores_visiveis).order_by("professor__nome_professor", "-ativo", "-data_inicio")
-    return render(request, "diario/professor_usuario/list.html", {"vinculos": qs})
+    if is_admin_escola(request.user):
+        professores_visiveis = filtrar_por_escola(Professor.objects.all(), request.user)
+        qs = qs.filter(professor__in=professores_visiveis)
+        pode_admin = True
+    else:
+        # Professor: vê apenas o próprio histórico (read-only)
+        prof = professor_do_usuario(request.user)
+        qs = qs.filter(professor=prof) if prof else qs.none()
+        pode_admin = False
+    qs = qs.order_by("professor__nome_professor", "-ativo", "-data_inicio")
+    return render(request, "diario/professor_usuario/list.html", {
+        "vinculos": qs,
+        "pode_admin": pode_admin,
+    })
 
 
 @admin_escola_required

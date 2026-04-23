@@ -4,19 +4,25 @@ from django.http import HttpResponseForbidden
 
 from ..models import Livro
 from ..forms import LivroForm
+from django.contrib.auth.decorators import login_required
 from ..services.escopo import (
     admin_escola_required, filtrar_por_escola, pode_administrar_escola,
-    escolas_administradas,
+    escolas_administradas, escolas_do_usuario, is_admin_escola,
 )
 
 
-@admin_escola_required
+@login_required
 def livro_list(request):
-    livros = filtrar_por_escola(
-        Livro.objects.select_related("escola", "materia").all(),
-        request.user,
-    ).order_by("escola__nome_escola", "nome_livro")
-    return render(request, "diario/livro/list.html", {"livros": livros})
+    base = Livro.objects.select_related("escola", "materia").all()
+    if is_admin_escola(request.user):
+        livros = filtrar_por_escola(base, request.user)
+    else:
+        livros = base.filter(escola__in=escolas_do_usuario(request.user))
+    livros = livros.order_by("escola__nome_escola", "nome_livro")
+    return render(request, "diario/livro/list.html", {
+        "livros": livros,
+        "pode_admin": is_admin_escola(request.user),
+    })
 
 
 def _form_com_escopo(request, instance=None):

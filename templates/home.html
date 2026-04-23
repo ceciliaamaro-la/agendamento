@@ -130,6 +130,116 @@
         </div>
     </div>
 
+    {# ─── Aluno / Responsável ─────────────────────────────────────────── #}
+    {% if papel == 'aluno' or papel == 'responsavel' %}
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <a href="{% url 'cal:listar_tarefas' %}" class="text-decoration-none">
+                    <div class="card stat-card bg-primary text-white h-100">
+                        <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                            <div>
+                                <div class="stat-num">{{ stats.proximos }}</div>
+                                <div class="stat-label">Próximos eventos</div>
+                            </div>
+                            <i class="bi bi-calendar-event stat-icon"></i>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="{% url 'cal:listar_tarefas' %}" class="text-decoration-none">
+                    <div class="card stat-card bg-success text-white h-100">
+                        <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                            <div>
+                                <div class="stat-num"><i class="bi bi-arrow-right"></i></div>
+                                <div class="stat-label">Minhas tarefas</div>
+                            </div>
+                            <i class="bi bi-list-task stat-icon"></i>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="{% url 'cal:horario_list' %}" class="text-decoration-none">
+                    <div class="card stat-card bg-info text-white h-100">
+                        <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                            <div>
+                                <div class="stat-num"><i class="bi bi-clock"></i></div>
+                                <div class="stat-label">Meus horários</div>
+                            </div>
+                            <i class="bi bi-calendar3 stat-icon"></i>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="{% url 'cal:monitoria_programacao' %}" class="text-decoration-none">
+                    <div class="card stat-card bg-warning text-dark h-100">
+                        <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                            <div>
+                                <div class="stat-num"><i class="bi bi-mortarboard-fill"></i></div>
+                                <div class="stat-label">Monitorias</div>
+                            </div>
+                            <i class="bi bi-mortarboard stat-icon"></i>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12 col-lg-7">
+                <div class="card panel-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h6 class="panel-title mb-0"><i class="bi bi-calendar-week me-1"></i>Próximos eventos (7 dias)</h6>
+                            <a href="{% url 'cal:listar_tarefas' %}" class="small text-decoration-none">Ver todos →</a>
+                        </div>
+                        {% for ev in proximos_eventos %}
+                            <div class="list-row d-block">
+                                <div class="d-flex justify-content-between gap-2">
+                                    <div class="text-truncate">
+                                        <span class="badge bg-primary">{{ ev.inicio|date:"d/m H:i" }}</span>
+                                        <span class="fw-semibold ms-1">{{ ev.titulo|truncatechars:50 }}</span>
+                                    </div>
+                                    {% if ev.materia %}
+                                    <span class="badge bg-info text-dark">{{ ev.materia }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="meta text-muted text-truncate mt-1">
+                                    {{ ev.turma.nome_turma }}{% if ev.professor %} · {{ ev.professor }}{% endif %}
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="empty-state">
+                                <i class="bi bi-emoji-smile fs-3 d-block mb-2 text-success"></i>
+                                Nenhum evento próximo. Aproveite!
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-5">
+                <div class="card panel-card h-100">
+                    <div class="card-body">
+                        <h6 class="panel-title mb-3"><i class="bi bi-people me-1"></i>{% if papel == 'aluno' %}Minha turma{% else %}Meus alunos{% endif %}</h6>
+                        {% for a in alunos %}
+                            <div class="list-row d-block">
+                                <div class="d-flex justify-content-between gap-2">
+                                    <span class="fw-semibold text-truncate">{{ a.nome_aluno }}</span>
+                                    <span class="badge bg-secondary">{{ a.turma.nome_turma }}</span>
+                                </div>
+                                <div class="meta text-muted text-truncate mt-1">{{ a.turma.escola.nome_escola }}</div>
+                            </div>
+                        {% empty %}
+                            <div class="empty-state">Nenhum aluno vinculado.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+
     {# ── Stats ────────────────────────────────────────────────────────── #}
     <div class="row g-3 mb-4">
         <div class="col-6 col-md-3">
@@ -346,6 +456,7 @@
         </div>
 
     </div>
+    {% endif %}
 
 </div>
 {% endblock %}

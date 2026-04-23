@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 
 from django.http import JsonResponse
-from django.contrib.admin.views.decorators import staff_member_required
+from agenda.services.escopo import admin_escola_required as staff_member_required
 
 logger = logging.getLogger(__name__)
 
