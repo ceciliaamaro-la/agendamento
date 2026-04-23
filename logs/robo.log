@@ -1680,3 +1680,4 @@ django.core.exceptions.FieldError: Cannot resolve keyword 'alunos' into field. C
 Watching for file changes with StatReloader
 /home/runner/workspace/agenda/views/views_user.py changed, reloading.
 Watching for file changes with StatReloader
+✅ Aluno Cecília Amaro — Teste Título — concluida=True

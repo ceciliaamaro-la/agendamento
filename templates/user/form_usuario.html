@@ -26,14 +26,20 @@
             </div>
 
             {# ── Senha ─────────────────────────────────── #}
-            {% if form.password %}
+            {% if form.password or form.nova_senha %}
             <hr class="my-4">
             <h6 class="text-uppercase text-muted small fw-bold mb-3"><i class="bi bi-shield-lock me-1"></i>Senha</h6>
             <div class="row g-3">
-              {% for field in form %}{% if field.name == 'password' or field.name == 'confirmar_senha' %}
+              {% for field in form %}{% if field.name == 'password' or field.name == 'nova_senha' or field.name == 'confirmar_senha' %}
                 <div class="col-md-6">
                   <label class="form-label fw-semibold" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                  {{ field }}
+                  <div class="input-group">
+                    {{ field }}
+                    <button type="button" class="btn btn-outline-secondary toggle-password" tabindex="-1"
+                            data-target="{{ field.id_for_label }}" title="Mostrar/ocultar senha">
+                      <i class="bi bi-eye"></i>
+                    </button>
+                  </div>
                   {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
                   {% for e in field.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
                 </div>
@@ -124,4 +130,24 @@
     {% endif %}
   </div>
 </div>
+
+<script>
+(function () {
+  document.querySelectorAll('.toggle-password').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = this.getAttribute('data-target');
+      var input = document.getElementById(id);
+      if (!input) return;
+      var icon = this.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) { icon.classList.remove('bi-eye'); icon.classList.add('bi-eye-slash'); }
+      } else {
+        input.type = 'password';
+        if (icon) { icon.classList.remove('bi-eye-slash'); icon.classList.add('bi-eye'); }
+      }
+    });
+  });
+})();
+</script>
 {% endblock %}
