@@ -1890,3 +1890,7 @@ Traceback (most recent call last):
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 django.db.utils.OperationalError: no such column: agenda_ordemhorario.turno
 Watching for file changes with StatReloader
+Not Found: /favicon.ico
+Not Found: /favicon.ico
+/home/runner/workspace/agenda/views/views_cascade.py changed, reloading.
+Watching for file changes with StatReloader

@@ -62,19 +62,20 @@ def cascade_turma(request, pk):
     except Turma.DoesNotExist:
         return JsonResponse({"ok": False}, status=404)
 
-    # Professores: tenta pelo vínculo de Horário; senão, todos da escola da turma
-    professores = Professor.objects.filter(
-        horarios__turma_id=turma.id, escola_id=turma.escola_id
-    ).distinct()
-    if not professores.exists() and turma.escola_id:
+    # Professores: TODOS os professores da escola da turma (independentemente
+    # de já terem horários cadastrados nessa turma).
+    if turma.escola_id:
         professores = Professor.objects.filter(escola_id=turma.escola_id)
+    else:
+        professores = Professor.objects.none()
 
-    materias = Materia.objects.filter(horarios__turma_id=turma.id).distinct()
-    if not materias.exists() and turma.escola_id:
-        # Mostra matérias dos professores da escola
+    # Matérias: todas as matérias dos professores da escola
+    if turma.escola_id:
         materias = Materia.objects.filter(
             professores__escola_id=turma.escola_id
         ).distinct()
+    else:
+        materias = Materia.objects.none()
 
     # Períodos (ordens) compatíveis com o turno da turma + os comuns
     if turma.turno:
