@@ -1,0 +1,94 @@
+Sim — dá pra resolver de forma melhor do que esse “fallback silencioso”.
+Na real, esse tipo de fallback tende a esconder inconsistência de dados, e isso volta a te morder depois.
+
+Vou te explicar como um sistema robusto trataria isso 👇
+
+⚠️ Problema real (raiz)
+
+Você hoje tem duas fontes de verdade:
+
+PerfilUsuario.professor_vinculado (atalho)
+ProfessorUsuario (fonte real com histórico)
+
+👉 E elas ficaram inconsistentes.
+
+O fallback resolveu o sintoma, mas não o problema.
+
+✅ Abordagem correta (recomendada)
+
+Escolher UMA fonte de verdade e padronizar
+
+👉 Minha recomendação:
+
+Use ProfessorUsuario como fonte oficial
+E trate PerfilUsuario.professor_vinculado como:
+
+opcional (cache)
+ou remova no futuro
+🔧 Solução melhor que o fallback
+✔️ Opção A (RECOMENDADA) — Função única + validação forte
+
+Centraliza tudo em um único lugar:
+
+def professor_do_usuario(user):
+    vinculo = (
+        ProfessorUsuario.objects
+        .filter(usuario=user, ativo=True)
+        .order_by('-data_inicio')
+        .select_related('professor')
+        .first()
+    )
+
+    if not vinculo:
+        raise PermissionDenied("Usuário não vinculado a um professor")
+
+    return vinculo.professor
+
+👉 Sem fallback
+👉 Sem ambiguidade
+👉 Se der erro, você descobre cedo
+
+✔️ Opção B — Sincronizar automaticamente (se quiser manter o atalho)
+
+Se você realmente quer manter perfil.professor_vinculado:
+
+👉 então sincroniza SEMPRE
+
+Exemplo com signal:
+
+@receiver(post_save, sender=ProfessorUsuario)
+def sincronizar_perfil(sender, instance, **kwargs):
+    if instance.ativo:
+        perfil = instance.usuario.perfilusuario
+        perfil.professor_vinculado = instance.professor
+        perfil.save()
+
+👉 Assim nunca fica inconsistente
+
+✔️ Opção C — Validar no login (muito usado)
+
+No login do usuário:
+
+def on_login(user):
+    if not ProfessorUsuario.objects.filter(usuario=user, ativo=True).exists():
+        raise Exception("Usuário professor sem vínculo ativo")
+
+👉 Falha cedo → sistema confiável
+
+🚫 O que eu NÃO recomendo
+
+👉 Esse fallback que você fez:
+
+if not perfil.professor_vinculado:
+    buscar em ProfessorUsuario
+
+Problemas:
+
+mascara erro de dados
+pode pegar vínculo errado (se houver múltiplos)
+dificulta debug no futuro
+🧠 Melhor arquitetura (resumo)
+Elemento	Papel
+ProfessorUsuario	✅ fonte oficial
+PerfilUsuario.professor_vinculado	⚠️ opcional (cache)
+professor_do_usuario()	🔐 ponto único de acesso
