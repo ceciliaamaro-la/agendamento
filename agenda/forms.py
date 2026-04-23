@@ -533,13 +533,22 @@ class DiasForm(forms.ModelForm):
 class OrdemHorarioForm(forms.ModelForm):
     class Meta:
         model = OrdemHorario
-        fields = ["ordem", "posicao", "inicio", "termino"]
+        fields = ["ordem", "turno", "posicao", "inicio", "termino"]
         widgets = {
             "ordem":   forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex: 1ª Aula, Intervalo, Almoço"}),
+            "turno":   forms.Select(attrs={"class": "form-select"}),
             "posicao": forms.NumberInput(attrs={"class": "form-control", "min": 0, "placeholder": "Ordem de exibição (menor = primeiro)"}),
             "inicio":  forms.TimeInput(attrs={"class": "form-control", "type": "time"}),
             "termino": forms.TimeInput(attrs={"class": "form-control", "type": "time"}),
         }
+        help_texts = {
+            "turno": "Use Matutino/Vespertino para diferenciar a 1ª aula da manhã da 1ª aula da tarde. Deixe em branco para itens comuns (intervalo, almoço).",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["turno"].required = False
+        self.fields["turno"].choices = [("", "— Comum a todos os turnos —")] + list(OrdemHorario.TURNO_CHOICES)
 
 
 # ===============================
@@ -570,6 +579,27 @@ class HorarioForm(forms.ModelForm):
         if user is not None:
             from .services.escopo import aplicar_escopo_no_form
             aplicar_escopo_no_form(self, user)
+
+        # Filtra os períodos disponíveis pelo turno da turma escolhida
+        # (em edição) ou enviada (em POST). Períodos comuns (sem turno,
+        # tipo Intervalo) sempre aparecem.
+        from django.db.models import Q
+        turma_id = (
+            self.data.get("turma") if self.is_bound
+            else getattr(self.instance, "turma_id", None)
+        )
+        if turma_id:
+            try:
+                t = Turma.objects.get(pk=turma_id)
+                if t.turno:
+                    self.fields["ordem"].queryset = OrdemHorario.objects.filter(
+                        Q(turno=t.turno) | Q(turno="")
+                    )
+            except (Turma.DoesNotExist, ValueError, TypeError):
+                pass
+
+        # Marca o select de ordem para a cascata JS atualizá-lo dinamicamente
+        self.fields["ordem"].widget.attrs["data-cascade"] = "ordem"
 
 
 # ===============================

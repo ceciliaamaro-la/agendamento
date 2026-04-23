@@ -9,7 +9,9 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_GET
 
-from ..models import Professor, Turma, Materia, Livro
+from django.db.models import Q
+
+from ..models import Professor, Turma, Materia, Livro, OrdemHorario
 from ..services.escopo import escolas_do_usuario
 
 
@@ -74,6 +76,14 @@ def cascade_turma(request, pk):
             professores__escola_id=turma.escola_id
         ).distinct()
 
+    # Períodos (ordens) compatíveis com o turno da turma + os comuns
+    if turma.turno:
+        ordens_qs = OrdemHorario.objects.filter(Q(turno=turma.turno) | Q(turno=""))
+    else:
+        ordens_qs = OrdemHorario.objects.all()
+    ordens_qs = ordens_qs.order_by("turno", "posicao", "id")
+    ordens = [{"id": o.id, "text": str(o)} for o in ordens_qs]
+
     return JsonResponse({
         "ok": True,
         "escola": {
@@ -82,6 +92,8 @@ def cascade_turma(request, pk):
         },
         "professores": _opt(professores, "nome_professor"),
         "materias": _opt(materias, "nome_materia"),
+        "ordens": ordens,
+        "turno": turma.turno,
     })
 
 

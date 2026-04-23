@@ -13,9 +13,29 @@ from ..services.escopo import (
 
 @bloquear_alunos_responsaveis
 def ordem_list(request):
-    ordens = OrdemHorario.objects.all()
+    ordens = OrdemHorario.objects.all().order_by("turno", "posicao", "id")
+
+    # Agrupa por turno para exibir uma seção por turno
+    from collections import OrderedDict
+    rotulos = dict(OrdemHorario.TURNO_CHOICES)
+    grupos = OrderedDict()
+    # Garante a ordem dos blocos: M, V, N, I, e por último os "comuns"
+    for sigla in ("M", "V", "N", "I", ""):
+        grupos[sigla] = {
+            "rotulo": rotulos.get(sigla, "Comum a todos os turnos"),
+            "itens": [],
+        }
+    for o in ordens:
+        chave = o.turno or ""
+        grupos.setdefault(chave, {"rotulo": rotulos.get(chave, "Comum"), "itens": []})
+        grupos[chave]["itens"].append(o)
+
+    # Remove blocos vazios
+    grupos = {k: v for k, v in grupos.items() if v["itens"]}
+
     return render(request, "diario/ordem_horario/list.html", {
         "ordens": ordens,
+        "grupos": grupos,
         "pode_admin": is_superadmin(request.user),
     })
 

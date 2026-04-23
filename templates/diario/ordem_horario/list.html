@@ -9,7 +9,22 @@
     </a>
   </div>
 
-  <div class="card shadow-sm" style="max-width:680px">
+  {% for sigla, grupo in grupos.items %}
+  <div class="card shadow-sm mb-4" style="max-width:760px">
+    <div class="card-header bg-light fw-bold d-flex align-items-center gap-2">
+      {% if sigla == 'M' %}
+        <span class="badge bg-warning text-dark"><i class="bi bi-sunrise"></i> Matutino</span>
+      {% elif sigla == 'V' %}
+        <span class="badge bg-info text-dark"><i class="bi bi-sun"></i> Vespertino</span>
+      {% elif sigla == 'N' %}
+        <span class="badge bg-dark"><i class="bi bi-moon-stars"></i> Noturno</span>
+      {% elif sigla == 'I' %}
+        <span class="badge bg-secondary"><i class="bi bi-clock"></i> Integral</span>
+      {% else %}
+        <span class="badge bg-light text-muted border"><i class="bi bi-three-dots"></i> Comum a todos</span>
+      {% endif %}
+      <small class="text-muted fw-normal">{{ grupo.itens|length }} período{{ grupo.itens|length|pluralize }}</small>
+    </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0">
         <thead class="table-light">
@@ -23,7 +38,7 @@
           </tr>
         </thead>
         <tbody>
-          {% for o in ordens %}
+          {% for o in grupo.itens %}
           <tr>
             <td class="text-muted small">{{ o.posicao }}</td>
             <td class="fw-semibold">{{ o.ordem }}</td>
@@ -54,20 +69,21 @@
               </a>
             </td>
           </tr>
-          {% empty %}
-          <tr>
-            <td colspan="6" class="text-center text-muted py-4">Nenhum período cadastrado.</td>
-          </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </div>
+  {% empty %}
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-clock fs-1 d-block mb-2"></i>Nenhum período cadastrado.
+  </div>
+  {% endfor %}
 
   <p class="text-muted small mt-3">
     <i class="bi bi-info-circle me-1"></i>
-    Exemplos: 1ª Aula, 2ª Aula, Intervalo, Almoço, Lanche.
-    Adicione ou renomeie conforme a grade da escola.
+    Use o turno para diferenciar a 1ª aula da manhã (ex.: 07:10) da 1ª aula da tarde (ex.: 13:10).
+    Períodos comuns (intervalo, almoço) podem ficar sem turno.
   </p>
 </div>
 {% endblock %}

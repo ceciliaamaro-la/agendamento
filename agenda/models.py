@@ -281,17 +281,34 @@ class Dias(models.Model):
 
 
 class OrdemHorario(models.Model):
+    TURNO_CHOICES = [
+        ("M", "Matutino"),
+        ("V", "Vespertino"),
+        ("N", "Noturno"),
+        ("I", "Integral"),
+    ]
+
     ordem = models.CharField(max_length=20, verbose_name="Ordem do horário")
     posicao = models.PositiveIntegerField(default=0, verbose_name="Posição")
     inicio = models.TimeField(null=True, blank=True, verbose_name="Início")
     termino = models.TimeField(null=True, blank=True, verbose_name="Término")
+    turno = models.CharField(
+        max_length=1,
+        choices=TURNO_CHOICES,
+        blank=True,
+        default="",
+        verbose_name="Turno",
+        help_text="Deixe em branco para períodos comuns a todos os turnos (ex.: Intervalo).",
+    )
 
     class Meta:
-        ordering = ["posicao", "id"]
+        ordering = ["turno", "posicao", "id"]
         verbose_name = "Ordem de Horário"
         verbose_name_plural = "Ordens de Horário"
 
     def __str__(self):
+        if self.turno:
+            return f"{self.ordem} ({self.get_turno_display()})"
         return self.ordem
 
     @property

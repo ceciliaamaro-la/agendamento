@@ -136,6 +136,12 @@
         keep: true, autoOnSingle: true, skipIfEmpty: true,
       });
 
+      // Atualiza períodos (ordens) conforme turno da turma
+      var ordemSel = $cascade("ordem");
+      if (ordemSel && d.ordens) {
+        setOptions(ordemSel, d.ordens, { keep: true, skipIfEmpty: true });
+      }
+
       // Cascata em cadeia
       if (profChanged) fireChange(profSel);
       else if (matChanged) fireChange(matSel);
