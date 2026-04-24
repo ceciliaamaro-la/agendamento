@@ -4,7 +4,11 @@
 <nav class="navbar navbar-dark bg-dark shadow-sm d-lg-none sticky-top" style="z-index:1040;">
     <div class="container-fluid">
         <a class="navbar-brand fw-semibold" href="{% url 'cal:home' %}">
-            <img src="{% static 'img/icon.png' %}" alt="Logo" width="28" height="28" class="me-2 rounded">Agenda
+            {% if escola_atual and escola_atual.logo %}
+              <img src="{{ escola_atual.logo.url }}" alt="Logo" width="28" height="28" class="me-2 rounded">
+            {% else %}
+              <img src="{% static 'img/icon.png' %}" alt="Logo" width="28" height="28" class="me-2 rounded">
+            {% endif %}Agenda
         </a>
         {% if not user.is_authenticated %}
         <a href="{% url 'login' %}" class="btn btn-sm btn-outline-success">Login</a>
@@ -19,8 +23,12 @@
      tabindex="-1" id="sidebarMobile" style="width:260px;">
     <div class="offcanvas-header border-bottom border-secondary">
         <div class="d-flex align-items-center">
-            <img src="{% static 'img/icon.png' %}" alt="Logo" width="30" height="30" class="me-2 rounded">
-            <span class="fw-bold">Agenda Escolar</span>
+            {% if escola_atual and escola_atual.logo %}
+              <img src="{{ escola_atual.logo.url }}" alt="Logo" width="30" height="30" class="me-2 rounded">
+            {% else %}
+              <img src="{% static 'img/icon.png' %}" alt="Logo" width="30" height="30" class="me-2 rounded">
+            {% endif %}
+            <span class="fw-bold">{{ escola_atual.nome_escola|default:"Agenda Escolar" }}</span>
         </div>
         <button type="button" class="btn-close btn-close-white"
                 data-bs-dismiss="offcanvas"></button>
@@ -93,8 +101,12 @@
      style="position:fixed;top:0;right:0;width:230px;height:100vh;z-index:1030;overflow-y:auto;">
     <div class="p-3 border-bottom border-secondary">
         <a href="{% url 'cal:home' %}" class="text-decoration-none text-white d-flex align-items-center">
-            <img src="{% static 'img/icon.png' %}" alt="Logo" width="28" height="28" class="me-2 rounded">
-            <span class="fw-bold">Agenda Escolar</span>
+            {% if escola_atual and escola_atual.logo %}
+              <img src="{{ escola_atual.logo.url }}" alt="Logo" width="28" height="28" class="me-2 rounded">
+            {% else %}
+              <img src="{% static 'img/icon.png' %}" alt="Logo" width="28" height="28" class="me-2 rounded">
+            {% endif %}
+            <span class="fw-bold">{{ escola_atual.nome_escola|default:"Agenda Escolar" }}</span>
         </a>
     </div>
     {% include 'sidebar_menu.html' %}
