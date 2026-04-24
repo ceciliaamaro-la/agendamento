@@ -97,13 +97,16 @@ def horario_update(request, pk):
 
 @login_required
 def horario_pdf(request):
+    from datetime import date
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import cm
     from reportlab.platypus import (
-        SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+        SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak,
+        HRFlowable,
     )
+    from ..services.pdf_utils import cabecalho_pdf
 
     turma_id = request.GET.get("turma")
     qs = Horario.objects.select_related(
@@ -117,26 +120,34 @@ def horario_pdf(request):
     grupos = defaultdict(dict)
     turmas_meta = {}
     ordens_usadas = defaultdict(dict)  # key -> {ordem_id: ordem_obj}
+    escolas_obj = {}
+    turmas_obj = {}
     for h in qs:
         key = (h.turma.escola_id, h.turma_id)
         grupos[key][(h.ordem_id, h.dia_id)] = h
         turmas_meta[key] = (h.turma.escola.nome_escola, h.turma.nome_turma)
         ordens_usadas[key][h.ordem_id] = h.ordem
+        escolas_obj[key] = h.turma.escola
+        turmas_obj[key] = h.turma
 
     dias = list(Dias.objects.order_by("ordem"))
 
     buf = BytesIO()
+    PAGE_W = landscape(A4)[0]
+    margem = 1.2 * cm
+    largura_util = PAGE_W - 2 * margem
     doc = SimpleDocTemplate(
         buf, pagesize=landscape(A4),
-        leftMargin=1.2 * cm, rightMargin=1.2 * cm,
-        topMargin=1.2 * cm, bottomMargin=1.2 * cm,
+        leftMargin=margem, rightMargin=margem,
+        topMargin=margem, bottomMargin=margem,
         title="Horários",
     )
     styles = getSampleStyleSheet()
-    h_style = ParagraphStyle("h", parent=styles["Heading2"], spaceAfter=6, textColor=colors.HexColor("#1a3a6c"))
     sub_style = ParagraphStyle("sub", parent=styles["Heading4"], spaceAfter=4, textColor=colors.HexColor("#444"))
     cell_style = ParagraphStyle("cell", parent=styles["Normal"], fontSize=8, leading=10, alignment=1)
     head_style = ParagraphStyle("head", parent=styles["Normal"], fontSize=9, leading=11, alignment=1, textColor=colors.white)
+    rodape_style = ParagraphStyle("rodape", parent=styles["Normal"], fontSize=7,
+                                  textColor=colors.HexColor("#6c757d"), alignment=1)
 
     story = []
     if not grupos:
@@ -144,8 +155,19 @@ def horario_pdf(request):
 
     for i, (key, celulas) in enumerate(grupos.items()):
         escola_nome, turma_nome = turmas_meta[key]
-        story.append(Paragraph(f"🏫 {escola_nome}", h_style))
-        story.append(Paragraph(f"Turma: <b>{turma_nome}</b>", sub_style))
+        escola = escolas_obj[key]
+        turma = turmas_obj[key]
+        turno_disp = turma.get_turno_display() if getattr(turma, "turno", "") else ""
+        subtitulos = [
+            f"Grade de <b>Horários</b> — Turma <b>{turma_nome}</b>"
+            + (f" ({turno_disp})" if turno_disp else ""),
+            f"Emitido em {date.today().strftime('%d/%m/%Y')}",
+        ]
+        story.append(cabecalho_pdf(escola, escola_nome or "Escola", subtitulos, largura_util))
+        story.append(Spacer(1, 0.15 * cm))
+        story.append(HRFlowable(width="100%", thickness=1.2,
+                                color=colors.HexColor("#0d6efd"),
+                                spaceBefore=0, spaceAfter=0.3 * cm))
 
         # Apenas ordens realmente registradas para esta turma
         ordens = sorted(ordens_usadas[key].values(), key=lambda o: (o.posicao, o.id))

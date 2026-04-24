@@ -2285,3 +2285,10 @@ Not Found: /apple-touch-icon-precomposed.png
 Not Found: /apple-touch-icon.png
 Not Found: /favicon.ico
 Not Found: /favicon.ico
+Watching for file changes with StatReloader
+/home/runner/workspace/agenda/views/views_pdf.py changed, reloading.
+Watching for file changes with StatReloader
+/home/runner/workspace/agenda/views/views_horario.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Not Found: /tarefas/exportar-pdf/

@@ -27,6 +27,7 @@ from reportlab.platypus import (
 )
 
 from ..models import Aluno, AgendaEvento, TarefaCompleta
+from ..services.pdf_utils import cabecalho_pdf
 
 # ── Paleta ────────────────────────────────────────────────────────────────────
 AZUL       = colors.HexColor("#0d6efd")
@@ -313,42 +314,15 @@ def gerar_pdf_tarefas(request):
     st = _estilos()
     story = []
 
-    # ── Cabeçalho do documento ────────────────────────────────────────────────
-    logo_path = os.path.join(settings.BASE_DIR, "static", "img", "icon.png")
-    header_data = []
-    if os.path.exists(logo_path):
-        logo = Image(logo_path, width=1.4 * cm, height=1.4 * cm)
-        header_data = [[
-            logo,
-            [
-                Paragraph("Agenda Escolar", st["titulo"]),
-                Paragraph(
-                    f"Tarefas de <b>{aluno.nome_aluno}</b>"
-                    + (f" — {aluno.turma}" if aluno.turma else ""),
-                    st["subtitulo"],
-                ),
-                Paragraph(
-                    f"Período: {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}",
-                    st["subtitulo"],
-                ),
-            ],
-        ]]
-        header_table = Table(header_data, colWidths=[1.8 * cm, largura_util - 1.8 * cm])
-        header_table.setStyle(TableStyle([
-            ("VALIGN",        (0, 0), (-1, -1), "MIDDLE"),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING",  (0, 0), (-1, -1), 0),
-            ("TOPPADDING",    (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-        ]))
-        story.append(header_table)
-    else:
-        story.append(Paragraph("Agenda Escolar", st["titulo"]))
-        story.append(Paragraph(
-            f"Tarefas de <b>{aluno.nome_aluno}</b>"
-            + (f" — {aluno.turma}" if aluno.turma else ""),
-            st["subtitulo"],
-        ))
+    # ── Cabeçalho do documento (usa a logo da escola do aluno) ──────────────
+    escola = aluno.turma.escola if aluno.turma_id and aluno.turma else None
+    titulo_doc = escola.nome_escola if escola and escola.nome_escola else "Agenda Escolar"
+    subtitulos = [
+        f"Tarefas de <b>{aluno.nome_aluno}</b>"
+        + (f" — {aluno.turma}" if aluno.turma else ""),
+        f"Período: {data_inicio.strftime('%d/%m/%Y')} a {data_fim.strftime('%d/%m/%Y')}",
+    ]
+    story.append(cabecalho_pdf(escola, titulo_doc, subtitulos, largura_util))
 
     story.append(Spacer(1, 0.3 * cm))
     story.append(HRFlowable(width="100%", thickness=1.5, color=AZUL, spaceAfter=0.4 * cm))
