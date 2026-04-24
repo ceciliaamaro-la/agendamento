@@ -2273,3 +2273,15 @@ Importing WmfImagePlugin
 Importing XbmImagePlugin
 Importing XpmImagePlugin
 Importing XVThumbImagePlugin
+Forbidden (CSRF cookie not set.): /diario/aula/2/chamada/
+Forbidden (CSRF token from POST incorrect.): /diario/aula/2/chamada/
+Not Found: /apple-touch-icon-precomposed.png
+Not Found: /favicon.ico
+Not Found: /apple-touch-icon.png
+Not Found: /apple-touch-icon-precomposed.png
+Not Found: /apple-touch-icon.png
+Not Found: /favicon.ico
+Not Found: /apple-touch-icon-precomposed.png
+Not Found: /apple-touch-icon.png
+Not Found: /favicon.ico
+Not Found: /favicon.ico
