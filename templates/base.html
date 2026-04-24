@@ -12,9 +12,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Agenda Escolar">
 
-    <link rel="shortcut icon" href="{% static 'img/icon.png' %}" type="image/png">
-    <link rel="icon" href="{% static 'img/icon.png' %}" type="image/png">
-    <link rel="apple-touch-icon" href="{% static 'img/icon-apple.png' %}">
+    {% if escola_atual and escola_atual.logo %}
+      <link rel="shortcut icon" href="{{ escola_atual.logo.url }}">
+      <link rel="icon" href="{{ escola_atual.logo.url }}">
+      <link rel="apple-touch-icon" href="{{ escola_atual.logo.url }}">
+    {% else %}
+      <link rel="shortcut icon" href="{% static 'img/icon.png' %}" type="image/png">
+      <link rel="icon" href="{% static 'img/icon.png' %}" type="image/png">
+      <link rel="apple-touch-icon" href="{% static 'img/icon-apple.png' %}">
+    {% endif %}
     <link rel="manifest" href="{% static 'manifest.json' %}">
 
     <!-- Preconexão / preload de recursos críticos -->
