@@ -132,6 +132,7 @@ urlpatterns = [
 
     # ─── Monitorias ────────────────────────────────────────────────────────────
     path('monitorias/', views_monitoria.monitoria_programacao, name='monitoria_programacao'),
+    path('monitorias/pdf/', views_monitoria.monitoria_programacao_pdf, name='monitoria_programacao_pdf'),
     path('monitorias/gerenciar/', views_monitoria.monitoria_list, name='monitoria_list'),
     path('monitorias/nova/', views_monitoria.monitoria_create, name='monitoria_create'),
     path('monitorias/<int:pk>/editar/', views_monitoria.monitoria_update, name='monitoria_update'),
