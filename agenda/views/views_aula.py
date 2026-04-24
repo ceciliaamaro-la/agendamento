@@ -33,34 +33,37 @@ def _aula_ou_403(request, pk):
 
 @login_required
 def aula_list(request):
+    from ..services.agrupamento import estruturar
+
     turma_id = request.GET.get("turma")
     qs = aulas_do_usuario(request.user).select_related(
-        "escola", "turma", "professor", "materia"
+        "escola", "turma", "turma__escola", "professor", "materia"
     ).annotate(
         data_ordem=Coalesce("data_entrega", Cast("criado_em", output_field=DateField()))
-    ).order_by("escola__nome_escola", "turma__nome_turma", "data_ordem")
+    ).order_by("escola__nome_escola", "turma__nome_turma", "materia__nome_materia", "data_ordem")
 
     if turma_id:
         qs = qs.filter(turma_id=turma_id)
 
-    # Agrupa: escola → turma → [aulas]
-    agrupado = defaultdict(lambda: defaultdict(list))
+    triples = []
     for aula in qs:
         dias = aula.dias_para_entrega()
         if dias is not None:
             aula.cor = "danger" if dias <= 1 else ("warning" if dias <= 3 else "success")
         else:
             aula.cor = "secondary"
-        agrupado[aula.escola.nome_escola][aula.turma.nome_turma].append(aula)
+        esc_nome = aula.escola.nome_escola if aula.escola else (
+            aula.turma.escola.nome_escola if aula.turma and aula.turma.escola else None
+        )
+        triples.append((esc_nome, aula.turma, aula.materia, aula))
 
-    def to_dict(d):
-        return {k: to_dict(v) for k, v in d.items()} if isinstance(d, defaultdict) else d
+    escolas = estruturar(triples, sem_materia_label="Sem matéria", sem_materia_icon="dash-circle")
 
     turmas = turmas_do_usuario(request.user).select_related("escola").order_by(
         "escola__nome_escola", "nome_turma"
     )
     return render(request, "diario/aula/list.html", {
-        "agrupado": to_dict(agrupado),
+        "escolas": escolas,
         "tem_aulas": qs.exists(),
         "turmas": turmas,
         "turma_filtro": turma_id,
@@ -178,6 +181,8 @@ def diario_chamada(request, pk):
 
 @login_required
 def diario_list(request):
+    from ..services.agrupamento import estruturar
+
     turma_id = request.GET.get("turma")
     qs = aulas_do_usuario(request.user).select_related(
         "turma", "turma__escola", "materia", "professor"
@@ -189,18 +194,18 @@ def diario_list(request):
     if turma_id:
         qs = qs.filter(turma_id=turma_id)
 
-    aulas_por_escola = defaultdict(lambda: defaultdict(list))
+    triples = []
     for aula in qs:
-        aulas_por_escola[aula.turma.escola.nome_escola][aula.turma.nome_turma].append(aula)
+        esc_nome = aula.turma.escola.nome_escola if aula.turma and aula.turma.escola else None
+        triples.append((esc_nome, aula.turma, aula.materia, aula))
 
-    def to_dict(d):
-        return {k: to_dict(v) for k, v in d.items()} if isinstance(d, defaultdict) else d
+    escolas = estruturar(triples, sem_materia_label="Sem matéria", sem_materia_icon="dash-circle")
 
     turmas = turmas_do_usuario(request.user).select_related("escola").order_by(
         "escola__nome_escola", "nome_turma"
     )
     return render(request, "diario/chamada/list.html", {
-        "aulas_por_escola": to_dict(aulas_por_escola),
+        "escolas": escolas,
         "tem_aulas": qs.exists(),
         "turmas": turmas,
         "turma_filtro": turma_id,

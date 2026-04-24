@@ -1,0 +1,101 @@
+{# Tabela reutilizável de eventos. Espera: `eventos` (lista), `is_admin_escola` (bool). #}
+<table class="table table-hover align-middle mb-0">
+  <thead class="table-light">
+    <tr>
+      {% if is_admin_escola %}
+      <th style="width:36px">
+        <input type="checkbox" class="form-check-input check-group"
+               title="Selecionar todos">
+      </th>
+      {% endif %}
+      <th style="min-width:160px">Início</th>
+      <th style="min-width:160px">Término</th>
+      <th>Título / Descrição</th>
+      <th>Tipo</th>
+      <th class="text-center">Anexo</th>
+      <th class="text-center">WhatsApp</th>
+      {% if is_admin_escola %}<th class="text-center">Ações</th>{% endif %}
+    </tr>
+  </thead>
+  <tbody>
+    {% for agenda in eventos %}
+    <tr>
+      {% if is_admin_escola %}
+      <td>
+        <input type="checkbox" name="ids" value="{{ agenda.pk }}"
+               class="form-check-input row-check">
+      </td>
+      {% endif %}
+      <td>
+        {% if agenda.inicio %}
+          <span class="badge bg-secondary">{{ agenda.inicio|date:"d/m/Y" }}</span>
+          <small class="text-muted d-block">{{ agenda.inicio|date:"H:i" }}</small>
+        {% elif agenda.data %}
+          <span class="badge bg-secondary">{{ agenda.data|date:"d/m/Y" }}</span>
+        {% else %}
+          <span class="text-muted">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if agenda.termino %}
+          <span class="badge bg-light text-dark border">{{ agenda.termino|date:"d/m/Y" }}</span>
+          <small class="text-muted d-block">{{ agenda.termino|date:"H:i" }}</small>
+        {% else %}
+          <span class="text-muted">—</span>
+        {% endif %}
+      </td>
+      <td>
+        <strong>{{ agenda.titulo }}</strong>
+        {% if agenda.descricao %}
+        <br>
+        <a class="small text-muted text-decoration-none"
+           data-bs-toggle="collapse"
+           href="#desc-{{ agenda.pk }}"
+           role="button">
+          <i class="bi bi-chevron-down"></i> ver descrição
+        </a>
+        <div class="collapse mt-1" id="desc-{{ agenda.pk }}">
+          <div class="card card-body py-2 px-3 small text-secondary">
+            {{ agenda.descricao }}
+          </div>
+        </div>
+        {% endif %}
+      </td>
+      <td><span class="badge bg-info text-dark">{{ agenda.tipo }}</span></td>
+      <td class="text-center">
+        {% if agenda.tem_anexo %}
+          {% if agenda.url_anexo %}
+            <a href="{{ agenda.url_anexo }}" target="_blank" rel="noopener noreferrer"
+               class="badge bg-warning text-dark text-decoration-none" title="Baixar anexo">
+              <i class="bi bi-paperclip"></i> Baixar
+            </a>
+          {% else %}
+            <span class="badge bg-warning text-dark" title="Possui arquivo para download">
+              <i class="bi bi-paperclip"></i> Sim
+            </span>
+          {% endif %}
+        {% else %}
+          <span class="text-muted small">—</span>
+        {% endif %}
+      </td>
+      <td class="text-center">
+        {% if agenda.enviado_whatsapp %}
+          <span class="badge bg-success"><i class="bi bi-check-circle"></i> Enviado</span>
+        {% else %}
+          <span class="badge bg-light text-muted">Pendente</span>
+        {% endif %}
+      </td>
+      {% if is_admin_escola %}
+      <td class="text-center text-nowrap">
+        <a href="{% url 'cal:agenda_update' agenda.pk %}" class="btn btn-sm btn-warning me-1">
+          <i class="bi bi-pencil"></i>
+        </a>
+        <a href="{% url 'cal:agenda_delete' agenda.pk %}" class="btn btn-sm btn-danger">
+          <i class="bi bi-trash"></i>
+        </a>
+      </td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

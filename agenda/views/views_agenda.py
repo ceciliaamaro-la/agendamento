@@ -28,6 +28,10 @@ def _evento_ou_403(request, pk):
 
 @login_required
 def agenda_list(request):
+    from collections import OrderedDict
+    from ..services.agrupamento import estruturar
+    from ..services.escopo import turmas_do_usuario
+
     turma_id = request.GET.get("turma")
     agendas = eventos_do_usuario(request.user).select_related(
         'turma', 'turma__escola', 'escola', 'professor', 'materia'
@@ -35,14 +39,36 @@ def agenda_list(request):
     if turma_id:
         agendas = agendas.filter(turma_id=turma_id)
     agendas = agendas.order_by(
-        'turma__escola__nome_escola', 'turma__nome_turma', '-inicio', '-data'
+        'turma__escola__nome_escola', 'turma__nome_turma',
+        'materia__nome_materia', '-inicio', '-data'
     )
-    from ..services.escopo import turmas_do_usuario
+
+    triples = []
+    eventos_escola_dict = OrderedDict()
+    for ev in agendas:
+        if ev.turma_id is None:
+            esc_nome = ev.escola.nome_escola if ev.escola else "—"
+            eventos_escola_dict.setdefault(esc_nome, []).append(ev)
+            continue
+        esc_nome = ev.turma.escola.nome_escola if ev.turma.escola else "—"
+        triples.append((esc_nome, ev.turma, ev.materia, ev))
+
+    escolas = estruturar(
+        triples,
+        sem_materia_label="Eventos da Turma",
+        sem_materia_icon="people-fill",
+    )
+    eventos_escola = [
+        {"nome": k, "items": v} for k, v in eventos_escola_dict.items()
+    ]
+
     turmas = turmas_do_usuario(request.user).select_related("escola").order_by(
         "escola__nome_escola", "nome_turma"
     )
     return render(request, 'agenda/list.html', {
-        'agendas': agendas,
+        'escolas': escolas,
+        'eventos_escola': eventos_escola,
+        'tem_eventos': bool(escolas) or bool(eventos_escola),
         'turmas': turmas,
         'turma_filtro': turma_id,
         'pode_criar': is_admin_escola(request.user) or is_professor(request.user),

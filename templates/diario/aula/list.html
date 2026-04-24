@@ -24,72 +24,83 @@
   </form>
 
   {% if tem_aulas %}
-    {% for escola, turmas_dict in agrupado.items %}
+    {% for esc in escolas %}
     <div class="card mb-4 shadow-sm">
       <div class="card-header bg-dark text-white fw-bold">
-        <i class="bi bi-building me-1"></i>{{ escola }}
+        <i class="bi bi-building me-1"></i>{{ esc.nome }}
       </div>
       <div class="card-body p-0">
-        {% for turma, aulas in turmas_dict.items %}
-        <div class="px-3 pt-3 pb-1">
-          <h6 class="fw-bold text-secondary"><i class="bi bi-people-fill me-1"></i>{{ turma }}</h6>
+        {% for t in esc.turmas %}
+        <div class="px-3 pt-3">
+          <h6 class="fw-bold text-secondary mb-1">
+            <i class="bi bi-people-fill me-1"></i>{{ t.nome }}
+            <span class="badge bg-secondary ms-1">{{ t.total }}</span>
+          </h6>
         </div>
-        <div class="table-responsive">
-          <table class="table table-hover align-middle mb-3">
-            <thead class="table-light">
-              <tr>
-                <th>Data Aula</th>
-                <th>Matéria</th>
-                <th>Professor</th>
-                <th>Dever</th>
-                <th>Entrega</th>
-                <th class="text-center" style="width:130px">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for aula in aulas %}
-              <tr>
-                <td>
-                  {% if aula.data_aula %}
-                    <span class="badge bg-secondary">{{ aula.data_aula|date:"d/m/Y" }}</span>
-                  {% else %}—{% endif %}
-                </td>
-                <td><span class="badge bg-info text-dark">{{ aula.materia }}</span></td>
-                <td>{{ aula.professor }}</td>
-                <td>
-                  {% if aula.dever %}
-                    <span class="text-truncate d-inline-block" style="max-width:200px" title="{{ aula.dever }}">
-                      {{ aula.dever|truncatechars:60 }}
-                    </span>
-                  {% else %}<span class="text-muted">—</span>{% endif %}
-                </td>
-                <td>
-                  {% if aula.data_entrega %}
-                    <span class="badge bg-{{ aula.cor }}">{{ aula.data_entrega|date:"d/m/Y" }}</span>
-                    {% with dias=aula.dias_para_entrega %}
-                      {% if dias is not None %}
-                        <small class="text-muted d-block">
-                          {% if dias == 0 %}Hoje{% elif dias > 0 %}{{ dias }} d{% else %}Atrasado{% endif %}
-                        </small>
-                      {% endif %}
-                    {% endwith %}
-                  {% else %}<span class="text-muted">—</span>{% endif %}
-                </td>
-                <td class="text-center text-nowrap">
-                  <a href="{% url 'cal:diario_chamada' aula.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Chamada">
-                    <i class="bi bi-person-check"></i>
-                  </a>
-                  <a href="{% url 'cal:aula_update' aula.pk %}" class="btn btn-sm btn-warning me-1">
-                    <i class="bi bi-pencil"></i>
-                  </a>
-                  <a href="{% url 'cal:aula_delete' aula.pk %}" class="btn btn-sm btn-danger">
-                    <i class="bi bi-trash"></i>
-                  </a>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+        {% include '_includes/materia_tabs_nav.html' with turma_block=t pane_suffix='aula' %}
+        <div class="tab-content">
+          {% for tab in t.tabs %}
+          <div class="tab-pane fade {% if forloop.first %}show active{% endif %}"
+               id="{{ tab.id }}-aula" role="tabpanel">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-3">
+                <thead class="table-light">
+                  <tr>
+                    <th>Data Aula</th>
+                    <th>Matéria</th>
+                    <th>Professor</th>
+                    <th>Dever</th>
+                    <th>Entrega</th>
+                    <th class="text-center" style="width:130px">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for aula in tab.items %}
+                  <tr>
+                    <td>
+                      {% if aula.data_aula %}
+                        <span class="badge bg-secondary">{{ aula.data_aula|date:"d/m/Y" }}</span>
+                      {% else %}—{% endif %}
+                    </td>
+                    <td><span class="badge bg-info text-dark">{{ aula.materia|default:"—" }}</span></td>
+                    <td>{{ aula.professor }}</td>
+                    <td>
+                      {% if aula.dever %}
+                        <span class="text-truncate d-inline-block" style="max-width:200px" title="{{ aula.dever }}">
+                          {{ aula.dever|truncatechars:60 }}
+                        </span>
+                      {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                      {% if aula.data_entrega %}
+                        <span class="badge bg-{{ aula.cor }}">{{ aula.data_entrega|date:"d/m/Y" }}</span>
+                        {% with dias=aula.dias_para_entrega %}
+                          {% if dias is not None %}
+                            <small class="text-muted d-block">
+                              {% if dias == 0 %}Hoje{% elif dias > 0 %}{{ dias }} d{% else %}Atrasado{% endif %}
+                            </small>
+                          {% endif %}
+                        {% endwith %}
+                      {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td class="text-center text-nowrap">
+                      <a href="{% url 'cal:diario_chamada' aula.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Chamada">
+                        <i class="bi bi-person-check"></i>
+                      </a>
+                      <a href="{% url 'cal:aula_update' aula.pk %}" class="btn btn-sm btn-warning me-1">
+                        <i class="bi bi-pencil"></i>
+                      </a>
+                      <a href="{% url 'cal:aula_delete' aula.pk %}" class="btn btn-sm btn-danger">
+                        <i class="bi bi-trash"></i>
+                      </a>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {% endfor %}
         </div>
         {% endfor %}
       </div>

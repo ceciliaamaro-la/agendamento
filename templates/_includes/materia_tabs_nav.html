@@ -1,0 +1,20 @@
+{# Renderiza a barra de abas (matérias + opcional "Geral") para uma turma.
+   Espera: `turma_block` (item da estrutura `escolas.turmas`) e `pane_suffix` (string
+   única na página, ex: "aula", "diario", "evento"). #}
+<div class="px-3 mt-2" style="overflow-x:auto;">
+  <ul class="nav nav-tabs flex-nowrap mb-0" role="tablist"
+      style="white-space:nowrap; border-bottom:1px solid var(--bs-border-color);">
+    {% for tab in turma_block.tabs %}
+    <li class="nav-item" role="presentation">
+      <button class="nav-link {% if forloop.first %}active{% endif %}"
+              type="button"
+              data-bs-toggle="tab"
+              data-bs-target="#{{ tab.id }}-{{ pane_suffix }}"
+              role="tab">
+        <i class="bi bi-{{ tab.icon }} me-1"></i>{{ tab.label }}
+        <span class="badge bg-secondary ms-1">{{ tab.items|length }}</span>
+      </button>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
