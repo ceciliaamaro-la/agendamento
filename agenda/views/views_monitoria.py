@@ -50,19 +50,22 @@ def monitoria_programacao(request):
 
     escolas = []
     for (esc_id, esc_nome), profs in sorted(escolas_dict.items(), key=lambda x: x[0][1] or ""):
+        # Apenas dias com pelo menos 1 monitoria nesta escola
+        dias_ids_usados = {d_id for por_dia in profs.values() for d_id in por_dia.keys()}
+        dias_usados = [d for d in dias if d.id in dias_ids_usados]
+
         linhas = []
         for (prof_id, prof_nome, mat_id, mat_nome), por_dia in sorted(profs.items(), key=lambda x: x[0][1]):
-            celulas = [{"dia": d, "items": por_dia.get(d.id, [])} for d in dias]
+            celulas = [{"dia": d, "items": por_dia.get(d.id, [])} for d in dias_usados]
             linhas.append({
                 "professor": prof_nome,
                 "materia": mat_nome,
                 "celulas": celulas,
             })
-        escolas.append({"nome": esc_nome, "linhas": linhas})
+        escolas.append({"nome": esc_nome, "dias": dias_usados, "linhas": linhas})
 
     return render(request, "diario/monitoria/programacao.html", {
         "escolas": escolas,
-        "dias": dias,
         "pode_admin": _pode_editar_monitoria(request.user),
     })
 

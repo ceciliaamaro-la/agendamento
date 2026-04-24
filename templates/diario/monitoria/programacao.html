@@ -27,10 +27,10 @@
             <tr>
               <th rowspan="2" style="vertical-align:middle;">DOCENTE</th>
               <th rowspan="2" style="vertical-align:middle;">COMPONENTE<br>CURRICULAR</th>
-              <th colspan="{{ dias|length }}">DIA DA SEMANA</th>
+              <th colspan="{{ esc.dias|length }}">DIA DA SEMANA</th>
             </tr>
             <tr>
-              {% for d in dias %}<th>{{ d.dias|upper }}</th>{% endfor %}
+              {% for d in esc.dias %}<th>{{ d.dias|upper }}</th>{% endfor %}
             </tr>
           </thead>
           <tbody>
