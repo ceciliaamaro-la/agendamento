@@ -1,0 +1,182 @@
+Objetivo: refinar controle por escola (multi-tenant leve) garantindo:
+
+segurança
+isolamento de dados
+UX consistente
+redução de erros humanos
+
+NÃO reescrever o sistema.
+Implementar melhorias incrementais.
+
+🏫 REGRA CENTRAL (MULTI-ESCOLA)
+
+Todo usuário pertence a uma escola.
+
+👉 Regra obrigatória:
+
+Usuário só vê dados da própria escola
+Todas as entidades principais devem estar vinculadas à escola:
+usuários
+professores
+alunos
+turmas
+matérias
+períodos
+eventos
+1. CAMPO "ESCOLA" NOS FORMULÁRIOS
+Comportamento padrão:
+Campo pré-selecionado automaticamente com:
+request.user.escola
+Campo deve ficar:
+🔒 DESABILITADO (readonly) para usuários comuns
+✏️ EDITÁVEL apenas para STAFF/SUPERUSER
+Implementação (Form)
+if not request.user.is_staff:
+    self.fields['escola'].disabled = True
+Validação (OBRIGATÓRIO no backend)
+
+Mesmo desabilitado no form:
+
+instance.escola = request.user.escola
+
+👉 Nunca confiar no frontend
+
+2. VÍNCULO PROFESSOR ↔ USUÁRIO
+Regras:
+Mostrar apenas:
+usuários da mesma escola
+professores da mesma escola
+Filtrar professores:
+apenas usuários com papel PROFESSOR
+Segurança extra:
+Bloquear vínculo entre escolas diferentes
+Garantir apenas 1 vínculo ativo por usuário
+3. TELA DE USUÁRIOS (/usuarios/)
+Exibir:
+Nome
+Email
+Escola
+Papel (PROFESSOR, ALUNO, etc.)
+Status (ativo/inativo)
+Data de criação
+Organização visual:
+
+Agrupar por papel:
+
+Professores
+Alunos
+Responsáveis
+Coordenação
+Admin
+Filtros obrigatórios:
+Mostrar apenas usuários da escola do usuário logado
+Permissões:
+Ação	Quem pode
+Visualizar	Coordenação/Admin
+Criar	Admin da escola
+Editar	Admin da escola
+Excluir	Apenas superuser
+4. ESCOLAS
+Permissões:
+Apenas staff ou superuser pode:
+criar
+editar
+excluir escolas
+5. CRIAÇÃO DE USUÁRIOS (ADMIN DA ESCOLA)
+
+Quando um admin da escola criar um usuário:
+
+Escola deve vir:
+pré-definida automaticamente
+não editável
+usuario.escola = request.user.escola
+Segurança:
+Bloquear criação de usuário em outra escola
+6. PERÍODOS (/periodos/)
+Nova regra:
+Períodos devem ser vinculados à escola
+class Periodo(models.Model):
+    escola = models.ForeignKey(Escola, on_delete=models.CASCADE)
+Motivo:
+
+Cada escola pode ter:
+
+horários diferentes
+estrutura de aulas diferente
+Filtro:
+Usuário só vê períodos da própria escola
+7. SEGURANÇA GLOBAL (OBRIGATÓRIO)
+Sempre validar:
+obj.escola == request.user.escola
+Criar utilitário:
+def pertence_a_escola(obj, user):
+    return obj.escola == user.escola
+Aplicar em:
+views
+APIs
+actions (edit/delete)
+8. BOAS PRÁTICAS (IMPORTANTE)
+8.1 Middleware (RECOMENDADO)
+
+Criar middleware para garantir isolamento automático:
+
+request.escola = request.user.escola
+8.2 BaseQuerySet
+
+Criar QuerySet padrão:
+
+class EscolaQuerySet(models.QuerySet):
+    def da_escola(self, user):
+        return self.filter(escola=user.escola)
+8.3 Logs de auditoria
+
+Registrar:
+
+criação
+edição
+exclusão
+
+Campos:
+
+usuário
+escola
+timestamp
+8.4 Soft delete (recomendado)
+
+Evitar exclusão física:
+
+ativo = models.BooleanField(default=True)
+8.5 Validação de consistência
+Usuário NÃO pode ter:
+múltiplos vínculos ativos (ProfessorUsuario)
+vínculos com escolas diferentes
+9. UX (MELHORIAS IMPORTANTES)
+Mostrar nome da escola no topo do sistema
+Exibir badge:
+Você está na escola: X
+Ao tentar acessar algo de outra escola:
+→ retornar 403
+10. RESULTADO ESPERADO
+Isolamento completo por escola
+Sistema mais seguro (sem vazamento de dados)
+UX consistente
+Redução de erros administrativos
+Base pronta para multi-escola real (SaaS futuro)
+IMPORTANTE
+NÃO quebrar funcionalidades existentes
+Implementar incrementalmente
+Priorizar segurança no backend
+
+
+💡 O que eu melhorei em relação ao seu texto
+Estruturei como arquitetura multi-tenant
+Adicionei:
+validação backend (essencial)
+QuerySet reutilizável
+middleware
+auditoria
+soft delete
+Evitei problemas futuros (principalmente segurança e escalabilidade)
+
+leia as informações acima, verifique o que já existe, se já existe e igual ou melhor, se não e possivel implementar? pode gerar poroblemas, vc concorda ou pode fazer melhor?
+faça perguntas para ajustar a direção e tirar duvidas!
