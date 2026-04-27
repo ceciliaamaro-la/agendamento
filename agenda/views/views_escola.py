@@ -1,15 +1,14 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
-from django.http import HttpResponseForbidden
 
-from agenda.models import Escola
+from agenda.models import Escola, LogAuditoria
 from agenda.forms import EscolaForm
-from django.contrib.auth.decorators import login_required
 from agenda.services.escopo import (
-    admin_escola_required, superadmin_required,
+    admin_escola_required, admin_estrito_required, superadmin_required, _negar,
     escolas_administradas, pode_administrar_escola, is_superadmin,
-    is_admin_escola, escolas_do_usuario, bloquear_alunos_responsaveis,
+    is_admin_escola, escolas_do_usuario, is_coordenador,
 )
+from agenda.services.auditoria import registrar as registrar_auditoria
 
 
 @admin_escola_required
@@ -18,7 +17,7 @@ def escola_list(request):
     return render(request, 'escola/list.html', {
         'escolas': escolas,
         'pode_criar': is_superadmin(request.user),
-        'pode_admin': is_admin_escola(request.user),
+        'pode_admin': is_admin_escola(request.user) and not is_coordenador(request.user),
     })
 
 
@@ -35,11 +34,11 @@ def escola_nova(request):
     return render(request, 'escola/form.html', {'form': form, 'titulo': 'Nova Escola'})
 
 
-@admin_escola_required
+@admin_estrito_required
 def escola_update(request, pk):
     escola = get_object_or_404(Escola, pk=pk)
     if not pode_administrar_escola(request.user, escola):
-        return HttpResponseForbidden("Sem permissão para editar esta escola.")
+        return _negar(request, "Sem permissão para editar esta escola.")
     if request.method == 'POST':
         form = EscolaForm(request.POST, request.FILES, instance=escola)
         if form.is_valid():
@@ -55,7 +54,17 @@ def escola_update(request, pk):
 def escola_delete(request, pk):
     escola = get_object_or_404(Escola, pk=pk)
     if request.method == 'POST':
+        nome_escola = escola.nome_escola
+        escola_id = escola.pk
         escola.delete()
+        registrar_auditoria(
+            request.user,
+            LogAuditoria.ACAO_EXCLUIR_ESCOLA,
+            f"Excluiu a escola '{nome_escola}'.",
+            recurso="Escola",
+            recurso_id=escola_id,
+            detalhes={"nome_escola": nome_escola},
+        )
         messages.success(request, 'Escola excluída com sucesso!')
         return redirect('cal:escola_list')
     return render(request, 'escola/confirm_delete.html', {'escola': escola})

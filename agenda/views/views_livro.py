@@ -1,13 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.http import HttpResponseForbidden
 
 from ..models import Livro
 from ..forms import LivroForm
 from django.contrib.auth.decorators import login_required
 from ..services.escopo import (
-    admin_escola_required, filtrar_por_escola, pode_administrar_escola,
-    escolas_administradas, escolas_do_usuario, is_admin_escola,
+    admin_escola_required, admin_estrito_required, _negar,
+    filtrar_por_escola, pode_administrar_escola,
+    escolas_administradas, escolas_do_usuario, is_admin_escola, is_coordenador,
 )
 
 
@@ -21,50 +21,58 @@ def livro_list(request):
     livros = livros.order_by("escola__nome_escola", "nome_livro")
     return render(request, "diario/livro/list.html", {
         "livros": livros,
-        "pode_admin": is_admin_escola(request.user),
+        "pode_admin": is_admin_escola(request.user) and not is_coordenador(request.user),
     })
 
 
 def _form_com_escopo(request, instance=None):
     form = LivroForm(request.POST or None, instance=instance)
     form.fields["escola"].queryset = escolas_administradas(request.user)
+    qs = form.fields["escola"].queryset
+    if qs.count() == 1:
+        unica = qs.first()
+        form.fields["escola"].initial = unica.id
+        form.fields["escola"].disabled = True
+        form.fields["escola"].help_text = "Sua escola foi selecionada automaticamente."
+        if not form.is_bound and not form.initial.get("escola"):
+            form.initial["escola"] = unica.id
     return form
 
 
-@admin_escola_required
+@admin_estrito_required
 def livro_create(request):
     form = _form_com_escopo(request)
     if request.method == "POST" and form.is_valid():
         livro = form.save(commit=False)
         if not pode_administrar_escola(request.user, livro.escola):
-            return HttpResponseForbidden("Sem permissão para esta escola.")
+            return _negar(request, "Sem permissão para esta escola.")
         livro.save()
         messages.success(request, "Livro cadastrado.")
         return redirect("cal:livro_list")
     return render(request, "diario/livro/form.html", {"form": form, "titulo": "Novo Livro"})
 
 
-@admin_escola_required
+@admin_estrito_required
 def livro_update(request, pk):
     livro = get_object_or_404(Livro, pk=pk)
     if not pode_administrar_escola(request.user, livro.escola):
-        return HttpResponseForbidden("Sem permissão para editar este livro.")
+        return _negar(request, "Sem permissão para editar este livro.")
     form = _form_com_escopo(request, instance=livro)
     if request.method == "POST" and form.is_valid():
         novo = form.save(commit=False)
         if not pode_administrar_escola(request.user, novo.escola):
-            return HttpResponseForbidden("Escola fora do seu escopo.")
+            return _negar(request, "Escola fora do seu escopo.")
         novo.save()
         messages.success(request, "Livro atualizado.")
         return redirect("cal:livro_list")
     return render(request, "diario/livro/form.html", {"form": form, "titulo": "Editar Livro"})
 
 
-@admin_escola_required
+@admin_estrito_required
 def livro_delete(request, pk):
     livro = get_object_or_404(Livro, pk=pk)
     if not pode_administrar_escola(request.user, livro.escola):
-        return HttpResponseForbidden("Sem permissão para excluir este livro.")
+        return _negar(request, "Sem permissão para excluir este livro.")
     if request.method == "POST":
         livro.delete()
         messages.success(request, "Livro excluído.")

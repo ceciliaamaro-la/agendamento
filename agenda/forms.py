@@ -536,8 +536,9 @@ class DiasForm(forms.ModelForm):
 class OrdemHorarioForm(forms.ModelForm):
     class Meta:
         model = OrdemHorario
-        fields = ["ordem", "turno", "posicao", "inicio", "termino"]
+        fields = ["escola", "ordem", "turno", "posicao", "inicio", "termino"]
         widgets = {
+            "escola":  forms.Select(attrs={"class": "form-select"}),
             "ordem":   forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex: 1ª Aula, Intervalo, Almoço"}),
             "turno":   forms.Select(attrs={"class": "form-select"}),
             "posicao": forms.NumberInput(attrs={"class": "form-control", "min": 0, "placeholder": "Ordem de exibição (menor = primeiro)"}),
@@ -546,12 +547,37 @@ class OrdemHorarioForm(forms.ModelForm):
         }
         help_texts = {
             "turno": "Use Matutino/Vespertino para diferenciar a 1ª aula da manhã da 1ª aula da tarde. Deixe em branco para itens comuns (intervalo, almoço).",
+            "escola": "Apenas super-administrador pode criar períodos GLOBAIS (em branco).",
         }
 
     def __init__(self, *args, **kwargs):
+        request_user = kwargs.pop("request_user", None)
         super().__init__(*args, **kwargs)
         self.fields["turno"].required = False
         self.fields["turno"].choices = [("", "— Comum a todos os turnos —")] + list(OrdemHorario.TURNO_CHOICES)
+
+        if request_user is not None:
+            from .services.escopo import (
+                is_superadmin, escolas_administradas,
+            )
+            if is_superadmin(request_user):
+                # Superadmin pode gerenciar globais (escola=None) ou específicos
+                self.fields["escola"].required = False
+                self.fields["escola"].empty_label = "— Global (todas as escolas) —"
+                self.fields["escola"].queryset = Escola.objects.all()
+            else:
+                # admin_escola DEVE escolher uma das suas escolas
+                self.fields["escola"].required = True
+                self.fields["escola"].empty_label = None
+                escolas = escolas_administradas(request_user)
+                self.fields["escola"].queryset = escolas
+                if escolas.count() == 1:
+                    unica = escolas.first()
+                    self.fields["escola"].initial = unica.id
+                    self.fields["escola"].disabled = True
+                    self.fields["escola"].help_text = "Sua escola foi selecionada automaticamente."
+                    if not self.is_bound and not self.initial.get("escola"):
+                        self.initial["escola"] = unica.id
 
 
 # ===============================
@@ -583,9 +609,9 @@ class HorarioForm(forms.ModelForm):
             from .services.escopo import aplicar_escopo_no_form
             aplicar_escopo_no_form(self, user)
 
-        # Filtra os períodos disponíveis pelo turno da turma escolhida
-        # (em edição) ou enviada (em POST). Períodos comuns (sem turno,
-        # tipo Intervalo) sempre aparecem.
+        # Filtra os períodos disponíveis pela escola+turno da turma escolhida
+        # (em edição) ou enviada (em POST). Períodos GLOBAIS (escola=None)
+        # e comuns (sem turno, tipo Intervalo) sempre aparecem.
         from django.db.models import Q
         turma_id = (
             self.data.get("turma") if self.is_bound
@@ -594,12 +620,23 @@ class HorarioForm(forms.ModelForm):
         if turma_id:
             try:
                 t = Turma.objects.get(pk=turma_id)
+                qs = OrdemHorario.objects.filter(
+                    Q(escola=t.escola) | Q(escola__isnull=True)
+                )
                 if t.turno:
-                    self.fields["ordem"].queryset = OrdemHorario.objects.filter(
-                        Q(turno=t.turno) | Q(turno="")
-                    )
+                    qs = qs.filter(Q(turno=t.turno) | Q(turno=""))
+                self.fields["ordem"].queryset = qs.order_by(
+                    "escola__nome_escola", "turno", "posicao", "id"
+                )
             except (Turma.DoesNotExist, ValueError, TypeError):
                 pass
+        elif user is not None:
+            # Sem turma escolhida ainda: mostra apenas as do escopo do usuário
+            from .services.escopo import escolas_do_usuario, is_superadmin
+            if not is_superadmin(user):
+                self.fields["ordem"].queryset = OrdemHorario.objects.filter(
+                    Q(escola__in=escolas_do_usuario(user)) | Q(escola__isnull=True)
+                ).order_by("escola__nome_escola", "turno", "posicao", "id")
 
         # Marca o select de ordem para a cascata JS atualizá-lo dinamicamente
         self.fields["ordem"].widget.attrs["data-cascade"] = "ordem"
@@ -728,8 +765,49 @@ class ProfessorUsuarioForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        request_user = kwargs.pop("request_user", None)
         super().__init__(*args, **kwargs)
         self.fields["data_inicio"].input_formats = ["%Y-%m-%d"]
         self.fields["data_fim"].input_formats = ["%Y-%m-%d"]
         self.fields["data_fim"].required = False
+
+        # Restringe professor e usuário ao escopo de quem está editando
+        if request_user is not None:
+            from .services.escopo import (
+                is_superadmin, escolas_administradas,
+                professores_do_usuario, usuarios_da_escola,
+            )
+            if not is_superadmin(request_user):
+                escolas = escolas_administradas(request_user)
+                self.fields["professor"].queryset = (
+                    Professor.objects.filter(escola__in=escolas)
+                                     .select_related("escola", "materia")
+                                     .order_by("escola__nome_escola", "nome_professor")
+                )
+                self.fields["usuario"].queryset = (
+                    usuarios_da_escola(request_user)
+                        .select_related("perfil", "perfil__escola")
+                        .order_by("perfil__escola__nome_escola", "username")
+                )
+
+    def clean(self):
+        dados = super().clean()
+        professor = dados.get("professor")
+        usuario = dados.get("usuario")
+        if professor and usuario:
+            # Valida que o usuário pertence à mesma escola do professor.
+            perfil = getattr(usuario, "perfil", None)
+            escolas_user = set()
+            if perfil:
+                if perfil.escola_id:
+                    escolas_user.add(perfil.escola_id)
+                escolas_user.update(perfil.escolas_extras.values_list("id", flat=True))
+            if professor.escola_id not in escolas_user:
+                raise forms.ValidationError(
+                    f"O usuário '{usuario.username}' não pertence à escola "
+                    f"do professor '{professor.nome_professor}' "
+                    f"({professor.escola.nome_escola}). Vincule primeiro o usuário "
+                    f"a essa escola."
+                )
+        return dados
 

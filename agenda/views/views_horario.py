@@ -7,9 +7,10 @@ from django.http import HttpResponse
 from ..models import Horario, Turma, Dias, OrdemHorario
 from ..forms import HorarioForm
 from ..services.escopo import (
-    admin_escola_required, filtrar_por_escola, pode_administrar_escola,
+    admin_escola_required, admin_estrito_required, _negar,
+    filtrar_por_escola, pode_administrar_escola,
     turmas_do_usuario, escolas_administradas, horarios_do_usuario,
-    is_admin_escola,
+    is_admin_escola, is_coordenador,
 )
 
 
@@ -59,36 +60,33 @@ def horario_list(request):
         "tem_horarios": qs.exists(),
         "turmas": turmas,
         "turma_filtro": turma_id,
-        "pode_admin": is_admin_escola(request.user),
+        "pode_admin": is_admin_escola(request.user) and not is_coordenador(request.user),
     })
 
 
-@admin_escola_required
+@admin_estrito_required
 def horario_create(request):
     form = HorarioForm(request.POST or None, user=request.user)
     if request.method == "POST" and form.is_valid():
         h = form.save(commit=False)
         if not pode_administrar_escola(request.user, h.turma.escola):
-            from django.http import HttpResponseForbidden
-            return HttpResponseForbidden("Sem permissão para esta escola.")
+            return _negar(request, "Sem permissão para esta escola.")
         h.save()
         messages.success(request, "Horário cadastrado.")
         return redirect("cal:horario_list")
     return render(request, "diario/horario/form.html", {"form": form, "titulo": "Novo Horário"})
 
 
-@admin_escola_required
+@admin_estrito_required
 def horario_update(request, pk):
     horario = get_object_or_404(Horario, pk=pk)
     if not pode_administrar_escola(request.user, horario.turma.escola):
-        from django.http import HttpResponseForbidden
-        return HttpResponseForbidden("Sem permissão para editar este horário.")
+        return _negar(request, "Sem permissão para editar este horário.")
     form = HorarioForm(request.POST or None, instance=horario, user=request.user)
     if request.method == "POST" and form.is_valid():
         h = form.save(commit=False)
         if not pode_administrar_escola(request.user, h.turma.escola):
-            from django.http import HttpResponseForbidden
-            return HttpResponseForbidden("Escola fora do seu escopo.")
+            return _negar(request, "Escola fora do seu escopo.")
         h.save()
         messages.success(request, "Horário atualizado.")
         return redirect("cal:horario_list")
@@ -231,12 +229,11 @@ def horario_pdf(request):
     return resp
 
 
-@admin_escola_required
+@admin_estrito_required
 def horario_delete(request, pk):
     horario = get_object_or_404(Horario, pk=pk)
     if not pode_administrar_escola(request.user, horario.turma.escola):
-        from django.http import HttpResponseForbidden
-        return HttpResponseForbidden("Sem permissão para excluir.")
+        return _negar(request, "Sem permissão para excluir este horário.")
     if request.method == "POST":
         horario.delete()
         messages.success(request, "Horário excluído.")

@@ -295,6 +295,15 @@ class OrdemHorario(models.Model):
         ("I", "Integral"),
     ]
 
+    escola = models.ForeignKey(
+        Escola,
+        on_delete=models.CASCADE,
+        related_name="ordens_horario",
+        null=True, blank=True,
+        verbose_name="Escola",
+        help_text="Deixe em branco para período GLOBAL (visível em todas as escolas). "
+                  "Apenas super-administrador pode gerenciar períodos globais.",
+    )
     ordem = models.CharField(max_length=20, verbose_name="Ordem do horário")
     posicao = models.PositiveIntegerField(default=0, verbose_name="Posição")
     inicio = models.TimeField(null=True, blank=True, verbose_name="Início")
@@ -309,14 +318,17 @@ class OrdemHorario(models.Model):
     )
 
     class Meta:
-        ordering = ["turno", "posicao", "id"]
+        ordering = ["escola__nome_escola", "turno", "posicao", "id"]
         verbose_name = "Ordem de Horário"
         verbose_name_plural = "Ordens de Horário"
 
     def __str__(self):
+        partes = [self.ordem]
         if self.turno:
-            return f"{self.ordem} ({self.get_turno_display()})"
-        return self.ordem
+            partes.append(f"({self.get_turno_display()})")
+        if self.escola_id:
+            partes.append(f"[{self.escola.nome_escola}]")
+        return " ".join(partes)
 
     @property
     def faixa(self):
@@ -588,3 +600,63 @@ class WhatsAppEnvio(models.Model):
 
     def __str__(self):
         return f"Turma {self.turma} - {self.hash_evento[:12]}..."
+
+
+class LogAuditoria(models.Model):
+    """Registro de auditoria para ações críticas do sistema.
+
+    Registramos apenas ações sensíveis (criar/excluir usuário, mudar papel,
+    excluir escola). Operações pedagógicas rotineiras (turmas, alunos,
+    aulas, eventos) não geram log para evitar inflar a tabela.
+    """
+
+    ACAO_CRIAR_USUARIO   = "criar_usuario"
+    ACAO_EXCLUIR_USUARIO = "excluir_usuario"
+    ACAO_MUDAR_PAPEL     = "mudar_papel"
+    ACAO_EXCLUIR_ESCOLA  = "excluir_escola"
+    ACAO_RESETAR_SENHA   = "resetar_senha"
+    ACAO_DESATIVAR_USER  = "desativar_usuario"
+
+    ACAO_CHOICES = [
+        (ACAO_CRIAR_USUARIO,   "Criação de usuário"),
+        (ACAO_EXCLUIR_USUARIO, "Exclusão de usuário"),
+        (ACAO_MUDAR_PAPEL,     "Mudança de papel"),
+        (ACAO_EXCLUIR_ESCOLA,  "Exclusão de escola"),
+        (ACAO_RESETAR_SENHA,   "Reset de senha"),
+        (ACAO_DESATIVAR_USER,  "Desativação de usuário"),
+    ]
+
+    autor = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="logs_auditoria",
+        verbose_name="Quem executou",
+    )
+    acao = models.CharField(max_length=30, choices=ACAO_CHOICES)
+    descricao = models.CharField(
+        max_length=255, blank=True,
+        help_text="Texto livre descrevendo a ação (ex.: 'Excluiu usuário joao').",
+    )
+    recurso = models.CharField(
+        max_length=50, blank=True,
+        help_text="Tipo do recurso afetado (ex.: 'User', 'Escola').",
+    )
+    recurso_id = models.PositiveIntegerField(null=True, blank=True)
+    escola = models.ForeignKey(
+        Escola, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="logs_auditoria",
+    )
+    detalhes = models.JSONField(default=dict, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-criado_em"]
+        verbose_name = "Log de Auditoria"
+        verbose_name_plural = "Logs de Auditoria"
+        indexes = [
+            models.Index(fields=["-criado_em"]),
+            models.Index(fields=["acao"]),
+        ]
+
+    def __str__(self):
+        autor = self.autor.username if self.autor else "?"
+        return f"[{self.criado_em:%d/%m/%Y %H:%M}] {autor} → {self.get_acao_display()}"

@@ -3,18 +3,47 @@
 {# ── Top bar (visível apenas em mobile) ─────────────────────────────────────── #}
 <nav class="navbar navbar-dark bg-dark shadow-sm d-lg-none sticky-top" style="z-index:1040;">
     <div class="container-fluid">
-        <a class="navbar-brand fw-semibold" href="{% url 'cal:home' %}">
+        <a class="navbar-brand fw-semibold d-flex align-items-center" href="{% url 'cal:home' %}">
             {% if escola_atual and escola_atual.logo %}
               <img src="{{ escola_atual.logo.url }}" alt="Logo" width="28" height="28" class="me-2 rounded">
             {% else %}
               <img src="{% static 'img/icon.png' %}" alt="Logo" width="28" height="28" class="me-2 rounded">
-            {% endif %}Agenda
+            {% endif %}
+            <span>Agenda</span>
+            {% if user.is_authenticated and escola_atual %}
+              <span class="badge bg-primary ms-2 d-none d-sm-inline" title="Escola atual">
+                <i class="bi bi-building"></i> {{ escola_atual.nome_escola }}
+              </span>
+            {% endif %}
         </a>
         {% if not user.is_authenticated %}
         <a href="{% url 'login' %}" class="btn btn-sm btn-outline-success">Login</a>
         {% endif %}
     </div>
 </nav>
+
+{# ── Badge da escola atual (apenas em mobile, abaixo da navbar) ──────────── #}
+{% if user.is_authenticated and escola_atual %}
+<div class="d-lg-none bg-primary-subtle border-bottom">
+  <div class="container-fluid py-1">
+    <div class="d-flex align-items-center justify-content-between small">
+      <div class="text-primary-emphasis">
+        <i class="bi bi-geo-alt-fill"></i>
+        <span class="text-muted">Você está na escola:</span>
+        <strong>{{ escola_atual.nome_escola }}</strong>
+        {% if papel_usuario %}
+          <span class="badge bg-secondary ms-1">{{ perfil_usuario.get_papel_display }}</span>
+        {% endif %}
+      </div>
+      {% if escolas_administradas|length > 1 or is_superadmin %}
+        <a href="{% url 'cal:perfil' %}" class="text-decoration-none small text-primary" title="Trocar escola padrão">
+          <i class="bi bi-pencil-square"></i>
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
 
 {% if user.is_authenticated %}
 

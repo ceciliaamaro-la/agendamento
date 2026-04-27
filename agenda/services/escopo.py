@@ -187,6 +187,25 @@ def livros_do_usuario(user):
     return Livro.objects.filter(escola__in=escolas_do_usuario(user))
 
 
+def usuarios_da_escola(user):
+    """Usuários (User) cujo PerfilUsuario.escola está nas escolas
+    administradas pelo `user` que está consultando.
+
+    Inclui também usuários cuja escola padrão seja None mas que tenham
+    `escolas_extras` em alguma das escolas administradas."""
+    from django.db.models import Q
+    from django.contrib.auth.models import User as _User
+
+    if is_superadmin(user):
+        return _User.objects.all()
+    escolas = escolas_administradas(user)
+    if not escolas.exists():
+        return _User.objects.none()
+    return _User.objects.filter(
+        Q(perfil__escola__in=escolas) | Q(perfil__escolas_extras__in=escolas)
+    ).distinct()
+
+
 # ── Filtro genérico por escola para LIST views ─────────────────────────────
 
 def filtrar_por_escola(qs, user, escola_lookup="escola"):
@@ -322,7 +341,11 @@ def horarios_do_usuario(user, base_qs=None):
 # ── Form helpers ───────────────────────────────────────────────────────────
 
 def aplicar_escopo_no_form(form, user):
-    """Aplica filtros de escola/perfil aos campos cascata de um ModelForm."""
+    """Aplica filtros de escola/perfil aos campos cascata de um ModelForm.
+
+    Quando o usuário tem acesso a apenas UMA escola, o campo `escola` é
+    travado (disabled) e pré-selecionado, evitando ambiguidade visual.
+    """
     fields = form.fields
     if "escola" in fields:
         # admin_escola só pode salvar em suas escolas administradas
@@ -330,6 +353,22 @@ def aplicar_escopo_no_form(form, user):
             fields["escola"].queryset = escolas_administradas(user)
         else:
             fields["escola"].queryset = escolas_do_usuario(user)
+
+        # UX: se o usuário tem apenas 1 escola visível, trava o select
+        # e força a seleção dela (mesmo assim o backend valida via queryset).
+        if not is_superadmin(user):
+            qs_escolas = fields["escola"].queryset
+            if qs_escolas.count() == 1:
+                unica = qs_escolas.first()
+                fields["escola"].initial = unica.id
+                fields["escola"].disabled = True
+                fields["escola"].empty_label = None
+                fields["escola"].help_text = (
+                    "Sua escola foi selecionada automaticamente."
+                )
+                if not form.is_bound and not form.initial.get("escola"):
+                    form.initial["escola"] = unica.id
+
     if "turma" in fields:
         fields["turma"].queryset = turmas_do_usuario(user)
     if "professor" in fields:

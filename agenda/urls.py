@@ -149,4 +149,7 @@ urlpatterns = [
     path('api/cascade/professor/<int:pk>/', views_cascade.cascade_professor, name='cascade_professor'),
     path('api/cascade/turma/<int:pk>/',     views_cascade.cascade_turma,     name='cascade_turma'),
     path('api/cascade/materia/<int:pk>/',   views_cascade.cascade_materia,   name='cascade_materia'),
+
+    # ─── Auditoria (somente super-administrador) ──────────────────────────────
+    path('auditoria/', views_user.auditoria_list, name='auditoria_list'),
 ]

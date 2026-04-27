@@ -77,12 +77,14 @@ def cascade_turma(request, pk):
     else:
         materias = Materia.objects.none()
 
-    # Períodos (ordens) compatíveis com o turno da turma + os comuns
+    # Períodos (ordens) compatíveis: da escola da turma OU globais (escola=None),
+    # respeitando o turno da turma (turno igual ou vazio = comum)
+    ordens_qs = OrdemHorario.objects.filter(
+        Q(escola_id=turma.escola_id) | Q(escola__isnull=True)
+    )
     if turma.turno:
-        ordens_qs = OrdemHorario.objects.filter(Q(turno=turma.turno) | Q(turno=""))
-    else:
-        ordens_qs = OrdemHorario.objects.all()
-    ordens_qs = ordens_qs.order_by("turno", "posicao", "id")
+        ordens_qs = ordens_qs.filter(Q(turno=turma.turno) | Q(turno=""))
+    ordens_qs = ordens_qs.order_by("escola__nome_escola", "turno", "posicao", "id")
     ordens = [{"id": o.id, "text": str(o)} for o in ordens_qs]
 
     return JsonResponse({

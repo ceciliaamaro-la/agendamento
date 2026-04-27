@@ -150,6 +150,15 @@
         <i class="bi bi-list-ol fs-5"></i>
         <span>Períodos</span>
     </a>
+
+    {% if is_superadmin %}
+    <a href="{% url 'cal:auditoria_list' %}"
+       class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white text-decoration-none
+              {% if 'auditoria' in request.resolver_match.url_name|default:'' %}active{% endif %}">
+        <i class="bi bi-shield-check fs-5"></i>
+        <span>Auditoria</span>
+    </a>
+    {% endif %}
     {% endif %}
 
     {# ── Administração (admin_escola gerencia usuários da escola) ──────── #}

@@ -6,8 +6,6 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q, DateField
 from django.db.models.functions import Coalesce, Cast
-from django.http import HttpResponseForbidden
-
 from ..models import Aula, Turma, DiarioAluno, Aluno
 from ..forms import AulaForm, DiarioAlunoFormSet
 from ..services.aula_evento_sync import sincronizar_evento_da_aula
@@ -18,15 +16,16 @@ from ..services.escopo import (
     is_superadmin,
     professor_do_usuario,
     turmas_do_usuario,
+    _negar,
 )
 
 
 def _aula_ou_403(request, pk):
-    """Busca a aula respeitando o escopo do usuário; 403 se não autorizado."""
+    """Busca a aula respeitando o escopo do usuário; redireciona com mensagem se não autorizado."""
     aula = get_object_or_404(Aula, pk=pk)
     if not pode_editar_aula(request.user, aula):
-        return None, HttpResponseForbidden(
-            "Você não tem permissão para acessar esta aula."
+        return None, _negar(
+            request, "Você não tem permissão para acessar esta aula."
         )
     return aula, None
 

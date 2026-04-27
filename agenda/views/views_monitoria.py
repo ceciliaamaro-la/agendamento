@@ -2,7 +2,7 @@ from io import BytesIO
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden, HttpResponse
+from django.http import HttpResponse
 
 from ..models import Monitoria, Escola, Dias
 from ..forms import MonitoriaForm
@@ -10,7 +10,7 @@ from ..services.escopo import (
     admin_estrito_required, filtrar_por_escola, pode_administrar_escola,
     escolas_administradas, escolas_do_usuario, is_superadmin, papel_de,
     is_admin_escola, is_professor, professor_do_usuario,
-    professor_ou_admin_required,
+    professor_ou_admin_required, _negar,
 )
 from ..models import PerfilUsuario
 
@@ -109,7 +109,7 @@ def monitoria_create(request):
         if is_professor(request.user) and not is_admin_escola(request.user):
             obj.professor = professor_do_usuario(request.user)
         if not _pode_editar_monitoria(request.user, obj):
-            return HttpResponseForbidden("Sem permissão para esta monitoria.")
+            return _negar(request, "Sem permissão para criar esta monitoria.")
         obj.save()
         messages.success(request, "Monitoria cadastrada.")
         return redirect("cal:monitoria_list")
@@ -120,14 +120,14 @@ def monitoria_create(request):
 def monitoria_update(request, pk):
     obj = get_object_or_404(Monitoria, pk=pk)
     if not _pode_editar_monitoria(request.user, obj):
-        return HttpResponseForbidden("Sem permissão.")
+        return _negar(request, "Sem permissão para editar esta monitoria.")
     form = _form_com_escopo(request, instance=obj)
     if request.method == "POST" and form.is_valid():
         novo = form.save(commit=False)
         if is_professor(request.user) and not is_admin_escola(request.user):
             novo.professor = professor_do_usuario(request.user)
         if not _pode_editar_monitoria(request.user, novo):
-            return HttpResponseForbidden("Escola/professor fora do seu escopo.")
+            return _negar(request, "Escola/professor fora do seu escopo.")
         novo.save()
         messages.success(request, "Monitoria atualizada.")
         return redirect("cal:monitoria_list")
@@ -273,7 +273,7 @@ def monitoria_programacao_pdf(request):
 def monitoria_delete(request, pk):
     obj = get_object_or_404(Monitoria, pk=pk)
     if not _pode_editar_monitoria(request.user, obj):
-        return HttpResponseForbidden("Sem permissão.")
+        return _negar(request, "Sem permissão para excluir esta monitoria.")
     if request.method == "POST":
         obj.delete()
         messages.success(request, "Monitoria excluída.")

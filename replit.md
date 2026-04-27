@@ -32,6 +32,8 @@ Sistema de acompanhamento de eventos escolares. Faz scraping da plataforma Berno
 - `Dias` — dias da semana com `ordem` (Seg=1...)
 - `OrdemHorario` — períodos da grade (1ª Aula, Intervalo, ...)
   - **Campo `turno`** (M/V/N/I, ou em branco para "comum a todos os turnos"): permite ter "1ª Aula 07:10 Matutino" e "1ª Aula 13:10 Vespertino" como entradas distintas; itens sem turno (Intervalo, Almoço) servem para qualquer turma
+  - **Campo `escola`** (FK opcional): se NULL → período GLOBAL (visível em todas as escolas, gerenciado apenas por superadmin); se preenchido → período específico da escola, gerenciável pelo admin_escola correspondente
+- `LogAuditoria` — registro de ações críticas (criar/excluir usuário, mudar papel, resetar senha, desativar usuário, excluir escola); visível apenas ao superadmin em `/auditoria/`
 - `Horario` — célula da grade: escola + turma + dia + ordem + (professor opc.) + (matéria opc.)
 - `Aula` — registro de aula ministrada (conteúdo, dever, datas)
 - `DiarioAluno` — chamada/diário por aula × aluno
@@ -40,10 +42,16 @@ Sistema de acompanhamento de eventos escolares. Faz scraping da plataforma Berno
 
 ## Papéis (PerfilUsuario)
 Definidos em `agenda/services/escopo.py`:
-- `superadmin` — vê e administra TUDO (também `is_superuser`/`is_staff`)
-- `admin_escola` / `coordenador` — administram conteúdo das escolas vinculadas ao perfil
+- `superadmin` — vê e administra TUDO (também `is_superuser`/`is_staff`); único que vê `/auditoria/` e gerencia períodos globais
+- `admin_escola` — administra conteúdo das escolas vinculadas ao perfil (CRUD completo)
+- `coordenador` — **somente leitura** em todas as áreas administrativas (mesma visão do admin_escola, mas sem botões/URLs de criar/editar/excluir)
 - `professor` — vê/edita só as próprias aulas/diários
 - `aluno` / `responsavel` — leitura das tarefas/horário/diário das turmas vinculadas
+
+### Decoradores de escopo (`agenda/services/escopo.py`)
+- `admin_escola_required` — admin_escola, coordenador ou superadmin (LIST)
+- `admin_estrito_required` — admin_escola/superadmin (CRIAR/EDITAR/EXCLUIR; bloqueia coordenador)
+- `_negar(request, msg)` — helper que dispara `messages.error` + redirect para a home, em vez de `HttpResponseForbidden` 403 (UX consistente)
 
 ## Programação de Monitorias
 - `/monitorias/` — visualização pública (todos os logados) em formato pivotado: linha por (Professor × Componente), colunas pelos dias da semana
@@ -54,7 +62,8 @@ Definidos em `agenda/services/escopo.py`:
 - `/` — home (requer login para ver painel)
 - `/login/`, `/logout/`, `/register/` — autenticação
 - `/escolas/`, `/turmas/`, `/alunos/`, `/professores/`, `/materias/`, `/livros/` — CRUDs pedagógicos
-- `/periodos/` — CRUD de OrdemHorario, agrupado por turno (Matutino/Vespertino/Noturno/Integral/Comum)
+- `/periodos/` — CRUD de OrdemHorario, agrupado por escola (Global/escola_X) e por turno
+- `/auditoria/` — log de ações críticas (somente superadmin)
 - `/horarios/`, `/horarios/novo/`, `/horarios/pdf/` — grade da turma; `novo/` filtra ordens pelo turno da turma escolhida
 - `/eventos/`, `/aulas/`, `/diario/` — eventos da agenda, aulas, diário/chamada
 - `/conexoes/` — credenciais Bernoulli

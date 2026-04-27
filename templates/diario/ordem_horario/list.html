@@ -2,88 +2,114 @@
 {% block title %}Períodos do Horário{% endblock %}
 {% block content %}
 <div class="container-fluid mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold text-primary"><i class="bi bi-list-ol"></i> Períodos do Horário</h2>
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h2 class="fw-bold text-primary mb-0"><i class="bi bi-list-ol"></i> Períodos do Horário</h2>
+    {% if pode_admin %}
     <a href="{% url 'cal:ordem_create' %}" class="btn btn-success btn-sm">
       <i class="bi bi-plus-circle"></i> Novo Período
     </a>
+    {% endif %}
   </div>
 
-  {% for sigla, grupo in grupos.items %}
-  <div class="card shadow-sm mb-4" style="max-width:760px">
-    <div class="card-header bg-light fw-bold d-flex align-items-center gap-2">
-      {% if sigla == 'M' %}
-        <span class="badge bg-warning text-dark"><i class="bi bi-sunrise"></i> Matutino</span>
-      {% elif sigla == 'V' %}
-        <span class="badge bg-info text-dark"><i class="bi bi-sun"></i> Vespertino</span>
-      {% elif sigla == 'N' %}
-        <span class="badge bg-dark"><i class="bi bi-moon-stars"></i> Noturno</span>
-      {% elif sigla == 'I' %}
-        <span class="badge bg-secondary"><i class="bi bi-clock"></i> Integral</span>
-      {% else %}
-        <span class="badge bg-light text-muted border"><i class="bi bi-three-dots"></i> Comum a todos</span>
-      {% endif %}
-      <small class="text-muted fw-normal">{{ grupo.itens|length }} período{{ grupo.itens|length|pluralize }}</small>
+  {% for chave_escola, blocos in grupos_por_escola.items %}
+    <div class="mb-2">
+      <h5 class="text-secondary fw-bold mb-3">
+        {% if chave_escola.1 %}
+          <i class="bi bi-building text-primary"></i> {{ chave_escola.0 }}
+        {% else %}
+          <i class="bi bi-globe text-success"></i> {{ chave_escola.0 }}
+          <span class="badge bg-success-subtle text-success-emphasis ms-1">Visível em todas as escolas</span>
+        {% endif %}
+      </h5>
     </div>
-    <div class="table-responsive">
-      <table class="table table-hover align-middle mb-0">
-        <thead class="table-light">
-          <tr>
-            <th style="width:80px">Posição</th>
-            <th>Nome</th>
-            <th>Início</th>
-            <th>Término</th>
-            <th class="text-center" style="width:80px">Ordem</th>
-            <th class="text-center" style="width:110px">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for o in grupo.itens %}
-          <tr>
-            <td class="text-muted small">{{ o.posicao }}</td>
-            <td class="fw-semibold">{{ o.ordem }}</td>
-            <td>{% if o.inicio %}{{ o.inicio|time:"H:i" }} H{% else %}—{% endif %}</td>
-            <td>{% if o.termino %}{{ o.termino|time:"H:i" }} H{% else %}—{% endif %}</td>
-            <td class="text-center text-nowrap">
-              {% if not forloop.first %}
-                <a href="{% url 'cal:ordem_mover' o.pk 'cima' %}" class="btn btn-sm btn-outline-secondary" title="Mover para cima">
-                  <i class="bi bi-arrow-up"></i>
-                </a>
-              {% else %}
-                <button class="btn btn-sm btn-outline-secondary" disabled><i class="bi bi-arrow-up"></i></button>
+
+    {% for sigla, grupo in blocos.items %}
+    <div class="card shadow-sm mb-4" style="max-width:760px">
+      <div class="card-header bg-light fw-bold d-flex align-items-center gap-2">
+        {% if sigla == 'M' %}
+          <span class="badge bg-warning text-dark"><i class="bi bi-sunrise"></i> Matutino</span>
+        {% elif sigla == 'V' %}
+          <span class="badge bg-info text-dark"><i class="bi bi-sun"></i> Vespertino</span>
+        {% elif sigla == 'N' %}
+          <span class="badge bg-dark"><i class="bi bi-moon-stars"></i> Noturno</span>
+        {% elif sigla == 'I' %}
+          <span class="badge bg-secondary"><i class="bi bi-clock"></i> Integral</span>
+        {% else %}
+          <span class="badge bg-light text-muted border"><i class="bi bi-three-dots"></i> Comum a todos</span>
+        {% endif %}
+        <small class="text-muted fw-normal">{{ grupo.itens|length }} período{{ grupo.itens|length|pluralize }}</small>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width:80px">Posição</th>
+              <th>Nome</th>
+              <th>Início</th>
+              <th>Término</th>
+              {% if pode_admin %}
+              <th class="text-center" style="width:80px">Ordem</th>
+              <th class="text-center" style="width:110px">Ações</th>
               {% endif %}
-              {% if not forloop.last %}
-                <a href="{% url 'cal:ordem_mover' o.pk 'baixo' %}" class="btn btn-sm btn-outline-secondary" title="Mover para baixo">
-                  <i class="bi bi-arrow-down"></i>
-                </a>
-              {% else %}
-                <button class="btn btn-sm btn-outline-secondary" disabled><i class="bi bi-arrow-down"></i></button>
+            </tr>
+          </thead>
+          <tbody>
+            {% for o in grupo.itens %}
+            <tr>
+              <td class="text-muted small">{{ o.posicao }}</td>
+              <td class="fw-semibold">{{ o.ordem }}</td>
+              <td>{% if o.inicio %}{{ o.inicio|time:"H:i" }} H{% else %}—{% endif %}</td>
+              <td>{% if o.termino %}{{ o.termino|time:"H:i" }} H{% else %}—{% endif %}</td>
+              {% if pode_admin %}
+              <td class="text-center text-nowrap">
+                {% if not forloop.first %}
+                  <a href="{% url 'cal:ordem_mover' o.pk 'cima' %}" class="btn btn-sm btn-outline-secondary" title="Mover para cima">
+                    <i class="bi bi-arrow-up"></i>
+                  </a>
+                {% else %}
+                  <button class="btn btn-sm btn-outline-secondary" disabled><i class="bi bi-arrow-up"></i></button>
+                {% endif %}
+                {% if not forloop.last %}
+                  <a href="{% url 'cal:ordem_mover' o.pk 'baixo' %}" class="btn btn-sm btn-outline-secondary" title="Mover para baixo">
+                    <i class="bi bi-arrow-down"></i>
+                  </a>
+                {% else %}
+                  <button class="btn btn-sm btn-outline-secondary" disabled><i class="bi bi-arrow-down"></i></button>
+                {% endif %}
+              </td>
+              <td class="text-center text-nowrap">
+                {% if o.escola_id is None and not is_superadmin %}
+                  <span class="text-muted small" title="Apenas super-administrador edita períodos globais">
+                    <i class="bi bi-lock"></i>
+                  </span>
+                {% else %}
+                  <a href="{% url 'cal:ordem_update' o.pk %}" class="btn btn-sm btn-warning me-1">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <a href="{% url 'cal:ordem_delete' o.pk %}" class="btn btn-sm btn-danger">
+                    <i class="bi bi-trash"></i>
+                  </a>
+                {% endif %}
+              </td>
               {% endif %}
-            </td>
-            <td class="text-center text-nowrap">
-              <a href="{% url 'cal:ordem_update' o.pk %}" class="btn btn-sm btn-warning me-1">
-                <i class="bi bi-pencil"></i>
-              </a>
-              <a href="{% url 'cal:ordem_delete' o.pk %}" class="btn btn-sm btn-danger">
-                <i class="bi bi-trash"></i>
-              </a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
+    {% endfor %}
   {% empty %}
-  <div class="text-center text-muted py-5">
-    <i class="bi bi-clock fs-1 d-block mb-2"></i>Nenhum período cadastrado.
-  </div>
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-clock fs-1 d-block mb-2"></i>Nenhum período cadastrado.
+    </div>
   {% endfor %}
 
   <p class="text-muted small mt-3">
     <i class="bi bi-info-circle me-1"></i>
-    Use o turno para diferenciar a 1ª aula da manhã (ex.: 07:10) da 1ª aula da tarde (ex.: 13:10).
-    Períodos comuns (intervalo, almoço) podem ficar sem turno.
+    Períodos globais (em verde) são visíveis em todas as escolas — apenas super-administrador os gerencia.
+    Cada escola pode definir seus próprios períodos (em azul).
+    Use o turno para diferenciar a 1ª aula da manhã da 1ª aula da tarde; deixe em branco para itens comuns (intervalo, almoço).
   </p>
 </div>
 {% endblock %}

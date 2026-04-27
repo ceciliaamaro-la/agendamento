@@ -2,7 +2,6 @@ import hashlib
 import secrets
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponseForbidden
 from django.utils.formats import get_format
 from ..models import AgendaEvento
 from ..forms import AgendaEventoForm
@@ -10,7 +9,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from ..services.escopo import (
     eventos_do_usuario, pode_editar_evento, is_admin_escola, is_professor,
-    professor_do_usuario,
+    professor_do_usuario, _negar,
 )
 
 
@@ -22,7 +21,7 @@ def _gerar_hash_manual(evento) -> str:
 def _evento_ou_403(request, pk):
     ev = get_object_or_404(AgendaEvento, pk=pk)
     if not pode_editar_evento(request.user, ev):
-        return None, HttpResponseForbidden("Sem permissão para editar este evento.")
+        return None, _negar(request, "Sem permissão para editar este evento.")
     return ev, None
 
 
@@ -79,7 +78,7 @@ def agenda_list(request):
 def agenda_create(request):
     from ..services.escopo import is_aluno, is_responsavel
     if is_aluno(request.user) or is_responsavel(request.user):
-        return HttpResponseForbidden("Sem permissão para criar eventos.")
+        return _negar(request, "Alunos e responsáveis não podem criar eventos.")
     if request.method == 'POST':
         form = AgendaEventoForm(request.POST, user=request.user)
         if form.is_valid():

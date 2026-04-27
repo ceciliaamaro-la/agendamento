@@ -2,7 +2,8 @@ from django.urls import reverse_lazy
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect, get_object_or_404
 from ..forms import UsuarioForm, UsuarioUpdateForm, UsuarioPasswordResetForm
-from ..models import PerfilUsuario
+from ..models import PerfilUsuario, LogAuditoria
+from ..services.auditoria import registrar as registrar_auditoria
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
@@ -68,6 +69,14 @@ def editar_usuario(request, user_id):
         return redirect('cal:home')
 
     usuario = get_object_or_404(User, id=user_id)
+    # Captura papel anterior para detectar mudança
+    papel_antes = None
+    if eh_admin:
+        try:
+            papel_antes = usuario.perfil.papel
+        except PerfilUsuario.DoesNotExist:
+            papel_antes = None
+
     # Auto-edição: form simples; admin/superadmin (não coord): form completo
     if eh_admin:
         FormClass = UsuarioForm
@@ -80,6 +89,23 @@ def editar_usuario(request, user_id):
         form = FormClass(request.POST, **{k: v for k, v in kwargs.items() if k != "instance"}, instance=usuario)
         if form.is_valid():
             form.save()
+            # Auditoria de mudança de papel
+            if eh_admin:
+                try:
+                    papel_depois = usuario.perfil.papel
+                except PerfilUsuario.DoesNotExist:
+                    papel_depois = None
+                if papel_antes != papel_depois:
+                    registrar_auditoria(
+                        request.user,
+                        LogAuditoria.ACAO_MUDAR_PAPEL,
+                        f"Alterou o papel de '{usuario.username}': "
+                        f"{papel_antes or '—'} → {papel_depois or '—'}.",
+                        recurso="User",
+                        recurso_id=usuario.id,
+                        escola=getattr(usuario.perfil, "escola", None) if hasattr(usuario, "perfil") else None,
+                        detalhes={"papel_antes": papel_antes, "papel_depois": papel_depois},
+                    )
             messages.success(request, 'Usuário atualizado com sucesso!')
             if eh_admin:
                 return redirect('cal:listar_usuarios')
@@ -97,7 +123,6 @@ def listar_usuarios(request):
     )
     perfil_papel = papel_de(request.user)
     if not (is_admin_escola(request.user)):
-        # admin_escola_required já cobre coordenador? Sim.
         messages.error(request, 'Você não tem permissão para acessar esta página.')
         return redirect('cal:home')
     # Coordenador: somente leitura (sem botões de criar/editar/excluir)
@@ -141,7 +166,19 @@ def adicionar_usuario(request):
     if request.method == 'POST':
         form = UsuarioForm(request.POST, request_user=request.user)
         if form.is_valid():
-            form.save()
+            novo_user = form.save()
+            registrar_auditoria(
+                request.user,
+                LogAuditoria.ACAO_CRIAR_USUARIO,
+                f"Criou o usuário '{novo_user.username}'.",
+                recurso="User",
+                recurso_id=novo_user.id,
+                escola=getattr(novo_user.perfil, "escola", None) if hasattr(novo_user, "perfil") else None,
+                detalhes={
+                    "username": novo_user.username,
+                    "papel": form.cleaned_data.get("papel"),
+                },
+            )
             messages.success(request, 'Usuário adicionado com sucesso!')
             return redirect('cal:listar_usuarios')
     else:
@@ -151,7 +188,7 @@ def adicionar_usuario(request):
 
 @login_required
 def excluir_usuario(request, user_id):
-    from ..services.escopo import is_admin_escola
+    from ..services.escopo import is_admin_escola, is_superadmin, escolas_administradas
     if not is_admin_escola(request.user):
         messages.error(request, 'Sem permissão.')
         return redirect('cal:home')
@@ -161,9 +198,34 @@ def excluir_usuario(request, user_id):
         messages.error(request, 'Você não pode excluir sua própria conta!')
         return redirect('cal:listar_usuarios')
 
+    usuario = get_object_or_404(User, id=user_id)
+
+    # Verifica escopo: admin_escola só pode excluir usuários das suas escolas
+    if not is_superadmin(request.user):
+        escolas = set(escolas_administradas(request.user).values_list("id", flat=True))
+        perfil = getattr(usuario, "perfil", None)
+        escolas_alvo = set()
+        if perfil:
+            if perfil.escola_id:
+                escolas_alvo.add(perfil.escola_id)
+            escolas_alvo.update(perfil.escolas_extras.values_list("id", flat=True))
+        if not escolas_alvo.intersection(escolas):
+            messages.error(request, 'Esse usuário não pertence à(s) sua(s) escola(s).')
+            return redirect('cal:listar_usuarios')
+
     if request.method == 'POST':
-        usuario = get_object_or_404(User, id=user_id)
+        username = usuario.username
+        escola_obj = getattr(usuario.perfil, "escola", None) if hasattr(usuario, "perfil") else None
         usuario.delete()
+        registrar_auditoria(
+            request.user,
+            LogAuditoria.ACAO_EXCLUIR_USUARIO,
+            f"Excluiu o usuário '{username}'.",
+            recurso="User",
+            recurso_id=user_id,
+            escola=escola_obj,
+            detalhes={"username": username},
+        )
         messages.success(request, 'Usuário excluído com sucesso!')
     return redirect('cal:listar_usuarios')
 
@@ -182,6 +244,14 @@ def resetar_senha(request, user_id):
         if form.is_valid():
             usuario.set_password(form.cleaned_data['nova_senha'])
             usuario.save()
+            registrar_auditoria(
+                request.user,
+                LogAuditoria.ACAO_RESETAR_SENHA,
+                f"Resetou a senha de '{usuario.username}'.",
+                recurso="User",
+                recurso_id=usuario.id,
+                escola=getattr(usuario.perfil, "escola", None) if hasattr(usuario, "perfil") else None,
+            )
             messages.success(request, 'Senha redefinida com sucesso!')
             return redirect('cal:listar_usuarios')
     else:
@@ -203,6 +273,14 @@ def desativar_usuario(request, user_id):
     user = get_object_or_404(User, id=user_id)
     user.is_active = False
     user.save()
+    registrar_auditoria(
+        request.user,
+        LogAuditoria.ACAO_DESATIVAR_USER,
+        f"Desativou o usuário '{user.username}'.",
+        recurso="User",
+        recurso_id=user.id,
+        escola=getattr(user.perfil, "escola", None) if hasattr(user, "perfil") else None,
+    )
     messages.success(request, "Usuário desativado com sucesso.")
     return redirect('cal:listar_usuarios')
 
@@ -312,3 +390,24 @@ def contato(request):
 
 def manual_publico(request):
     return render(request, 'manual_publico.html')
+
+
+# ─── Auditoria ──────────────────────────────────────────────────────────────
+
+@login_required
+def auditoria_list(request):
+    """Lista de logs de auditoria — visível somente ao super-administrador."""
+    from ..services.escopo import is_superadmin
+    if not is_superadmin(request.user):
+        messages.error(request, "Esta área é restrita ao super-administrador.")
+        return redirect('cal:home')
+    logs = LogAuditoria.objects.select_related("autor", "escola").order_by("-criado_em")
+    acao_filtro = request.GET.get("acao") or ""
+    if acao_filtro:
+        logs = logs.filter(acao=acao_filtro)
+    logs = logs[:500]  # paginação simples: últimos 500
+    return render(request, "auditoria/list.html", {
+        "logs": logs,
+        "acoes": LogAuditoria.ACAO_CHOICES,
+        "acao_filtro": acao_filtro,
+    })
