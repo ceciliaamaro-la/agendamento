@@ -71,7 +71,7 @@ Definidos em `agenda/services/escopo.py`:
 - `/tarefas/<aluno_id>/`, `/tarefa/concluir/`, `/tarefa/ocultar/` — tarefas do aluno
 - `/monitorias/`, `/monitorias/gerenciar/`, `/monitorias/nova/` — monitorias
 - `/vinculos-professor/` — vínculos Professor↔Usuário
-- `/usuarios/`, `/perfil/` — gestão de usuários
+- `/usuarios/`, `/perfil/` — gestão de usuários (lista com abas por papel, busca, badges de escola/vínculo, último acesso e toggle "mostrar inativos"; querystring `?papel=&busca=` mantida sincronizada para futura migração server-side)
 - `/admin/` — Django Admin
 
 ## Endpoints AJAX (cascata de formulários)

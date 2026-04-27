@@ -118,22 +118,37 @@ def editar_usuario(request, user_id):
 @login_required
 def listar_usuarios(request):
     from ..services.escopo import (
-        is_admin_escola, is_superadmin, is_coordenador, escolas_administradas,
+        is_admin_escola, is_superadmin, escolas_administradas,
         papel_de,
     )
+    from django.db.models import Prefetch
+    from ..models import Aluno
+
     perfil_papel = papel_de(request.user)
     if not (is_admin_escola(request.user)):
         messages.error(request, 'Você não tem permissão para acessar esta página.')
         return redirect('cal:home')
     # Coordenador: somente leitura (sem botões de criar/editar/excluir)
     eh_coordenador = (perfil_papel == PerfilUsuario.PAPEL_COORDENADOR)
+
+    # ── Querystring (preparada para futura migração server-side) ─────────
+    papel_filtro = (request.GET.get('papel') or '').strip()
+    busca = (request.GET.get('busca') or '').strip()
+
+    # ── Base queryset com select/prefetch para evitar N+1 ────────────────
     usuarios = (
         User.objects
         .select_related('perfil', 'perfil__escola', 'perfil__professor_vinculado')
+        .prefetch_related(
+            'perfil__escolas_extras',
+            Prefetch(
+                'alunos',
+                queryset=Aluno.objects.only('id', 'nome_aluno'),
+            ),
+        )
     )
     if not is_superadmin(request.user):
         escolas = escolas_administradas(request.user)
-        # Apenas usuários cujo perfil está vinculado a uma escola administrada
         usuarios = usuarios.filter(
             perfil__escola__in=escolas
         ) | usuarios.filter(
@@ -141,9 +156,50 @@ def listar_usuarios(request):
         )
         usuarios = usuarios.distinct()
     usuarios = usuarios.order_by('username')
+    usuarios_list = list(usuarios)
+
+    # ── Anota cada usuário com info auxiliar para o template ─────────────
+    PAPEL_SEM = '__sem__'
+    contagem = {p[0]: 0 for p in PerfilUsuario.PAPEL_CHOICES}
+    contagem[PAPEL_SEM] = 0
+    contagem_inativos = 0
+    for u in usuarios_list:
+        perfil = getattr(u, 'perfil', None)
+        if perfil and perfil.papel:
+            chave_papel = perfil.papel
+        else:
+            chave_papel = PAPEL_SEM
+        u.papel_chave = chave_papel
+        if chave_papel in contagem:
+            contagem[chave_papel] += 1
+        if not u.is_active:
+            contagem_inativos += 1
+
+    # ── Monta lista ordenada de abas (papel, label, contador) ────────────
+    PAPEL_LABEL_SEM = 'Sem papel'
+    abas = []
+    for codigo, label in PerfilUsuario.PAPEL_CHOICES:
+        abas.append({
+            'codigo': codigo,
+            'label': label,
+            'count': contagem.get(codigo, 0),
+        })
+    if contagem.get(PAPEL_SEM, 0):
+        abas.append({
+            'codigo': PAPEL_SEM,
+            'label': PAPEL_LABEL_SEM,
+            'count': contagem[PAPEL_SEM],
+        })
+
     return render(request, 'user/listar.html', {
-        'usuarios': usuarios,
+        'usuarios': usuarios_list,
         'pode_admin': not eh_coordenador,
+        'abas': abas,
+        'total_usuarios': len(usuarios_list),
+        'total_inativos': contagem_inativos,
+        'papel_filtro': papel_filtro,
+        'busca': busca,
+        'PAPEL_SEM': PAPEL_SEM,
     })
 
 

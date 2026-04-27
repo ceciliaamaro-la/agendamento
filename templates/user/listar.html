@@ -1,31 +1,172 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0 fw-bold"><i class="bi bi-people-fill text-primary"></i> Usuários</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h2 class="mb-0 fw-bold"><i class="bi bi-people-fill text-primary"></i> Usuários
+            <span class="badge bg-secondary-subtle text-secondary fw-normal align-middle">{{ total_usuarios }}</span>
+        </h2>
+        {% if pode_admin %}
         <a href="{% url 'cal:adicionar_usuario' %}" class="btn btn-primary shadow-sm">
             <i class="bi bi-person-plus-fill"></i> <span class="d-none d-sm-inline">Novo Usuário</span>
         </a>
+        {% endif %}
     </div>
 
-    <!-- Desktop Table -->
+    {# ── Barra de busca ───────────────────────────────────────────────── #}
+    <div class="card border-0 shadow-sm rounded-4 mb-3">
+        <div class="card-body py-2 px-3">
+            <div class="row g-2 align-items-center">
+                <div class="col-md-8">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" id="usuariosBusca" class="form-control border-start-0"
+                               placeholder="Buscar por nome, usuário ou e-mail..."
+                               value="{{ busca|default:'' }}">
+                        <button class="btn btn-outline-secondary" type="button" id="usuariosBuscaLimpar" title="Limpar">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <div class="form-check form-switch d-inline-block">
+                        <input class="form-check-input" type="checkbox" role="switch" id="mostrarInativos">
+                        <label class="form-check-label small text-muted" for="mostrarInativos">
+                            Mostrar inativos <span class="badge bg-secondary-subtle text-secondary">{{ total_inativos }}</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Abas por papel ───────────────────────────────────────────────── #}
+    <ul class="nav nav-pills flex-wrap gap-1 mb-3" id="papelTabs">
+        <li class="nav-item">
+            <button type="button" class="nav-link active py-1 px-3 papel-tab"
+                    data-papel="">
+                Todos
+                <span class="badge bg-light text-dark ms-1">{{ total_usuarios }}</span>
+            </button>
+        </li>
+        {% for aba in abas %}
+            {% if aba.count > 0 %}
+            <li class="nav-item">
+                <button type="button" class="nav-link py-1 px-3 papel-tab"
+                        data-papel="{{ aba.codigo }}">
+                    {{ aba.label }}
+                    <span class="badge bg-light text-dark ms-1">{{ aba.count }}</span>
+                </button>
+            </li>
+            {% endif %}
+        {% endfor %}
+    </ul>
+
+    {# ── Tabela desktop ───────────────────────────────────────────────── #}
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden d-none d-md-block">
         <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
+            <table class="table table-hover mb-0 align-middle" id="usuariosTabela">
                 <thead class="bg-dark text-white">
                     <tr>
                         <th class="px-4 py-3">Usuário</th>
-                        <th class="py-3">Email</th>
                         <th class="py-3">Nome</th>
-                        <th class="py-3 px-4 text-center">Ações</th>
+                        <th class="py-3">E-mail</th>
+                        <th class="py-3">Papel</th>
+                        <th class="py-3">Escola(s)</th>
+                        <th class="py-3">Vínculo</th>
+                        <th class="py-3">Último acesso</th>
+                        <th class="py-3 text-center">Status</th>
+                        {% if pode_admin %}<th class="py-3 px-4 text-center">Ações</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for usuario in usuarios %}
-                    <tr>
-                        <td class="px-4 fw-bold text-primary">{{ usuario.username }}</td>
-                        <td class="text-muted">{{ usuario.email }}</td>
-                        <td>{{ usuario.get_full_name|default:"-" }}</td>
+                    {% with perfil=usuario.perfil %}
+                    <tr class="usuario-row{% if not usuario.is_active %} table-secondary text-muted opacity-75{% endif %}"
+                        data-papel="{{ usuario.papel_chave }}"
+                        data-ativo="{% if usuario.is_active %}1{% else %}0{% endif %}"
+                        data-busca="{{ usuario.username|lower }} {{ usuario.email|lower }} {{ usuario.get_full_name|lower }}">
+                        <td class="px-4">
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center me-2 fw-bold"
+                                     style="width:36px;height:36px;font-size:.85rem;">
+                                    {{ usuario.username|first|upper }}{{ usuario.last_name|first|upper }}
+                                </div>
+                                <span class="fw-bold {% if usuario.is_active %}text-primary{% endif %}">{{ usuario.username }}</span>
+                            </div>
+                        </td>
+                        <td>{{ usuario.get_full_name|default:"—" }}</td>
+                        <td class="text-muted small">{{ usuario.email|default:"—" }}</td>
+                        <td>
+                            {% if perfil and perfil.papel %}
+                                {% if perfil.papel == 'superadmin' %}
+                                    <span class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-shield-lock"></i> Super-admin</span>
+                                {% elif perfil.papel == 'admin_escola' %}
+                                    <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle"><i class="bi bi-building-gear"></i> Admin Escola</span>
+                                {% elif perfil.papel == 'coordenador' %}
+                                    <span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle"><i class="bi bi-eye"></i> Coordenador</span>
+                                {% elif perfil.papel == 'professor' %}
+                                    <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle"><i class="bi bi-mortarboard"></i> Professor</span>
+                                {% elif perfil.papel == 'responsavel' %}
+                                    <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle"><i class="bi bi-person-heart"></i> Responsável</span>
+                                {% elif perfil.papel == 'aluno' %}
+                                    <span class="badge rounded-pill bg-secondary-subtle text-secondary border border-secondary-subtle"><i class="bi bi-person"></i> Aluno</span>
+                                {% else %}
+                                    <span class="badge rounded-pill bg-light text-dark">{{ perfil.get_papel_display }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge rounded-pill bg-light text-muted border">Sem papel</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if perfil %}
+                                {% if perfil.escola %}
+                                    <span class="badge rounded-pill bg-primary-subtle text-primary"><i class="bi bi-building"></i> {{ perfil.escola.nome_escola }}</span>
+                                {% endif %}
+                                {% for ex in perfil.escolas_extras.all %}
+                                    <span class="badge rounded-pill bg-light text-dark border" title="Escola adicional">{{ ex.nome_escola }}</span>
+                                {% endfor %}
+                                {% if not perfil.escola and not perfil.escolas_extras.all %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if perfil and perfil.professor_vinculado %}
+                                <span class="small"><i class="bi bi-link-45deg text-success"></i> {{ perfil.professor_vinculado.nome_professor }}</span>
+                            {% elif usuario.alunos.all %}
+                                {% with filhos=usuario.alunos.all %}
+                                <span class="badge bg-info-subtle text-info" data-bs-toggle="tooltip"
+                                      title="{% for f in filhos %}{{ f.nome_aluno }}{% if not forloop.last %} • {% endif %}{% endfor %}">
+                                    <i class="bi bi-people"></i> {{ filhos|length }} filho{{ filhos|length|pluralize }}
+                                </span>
+                                {% endwith %}
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="small text-muted">
+                            {% if usuario.last_login %}
+                                <span data-bs-toggle="tooltip" title="{{ usuario.last_login|date:'d/m/Y H:i' }}">
+                                    {{ usuario.last_login|timesince }} atrás
+                                </span>
+                            {% else %}
+                                <span class="fst-italic">Nunca acessou</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if not usuario.is_active %}
+                                <span class="badge bg-secondary"><i class="bi bi-slash-circle"></i> Inativo</span>
+                            {% elif usuario.is_superuser %}
+                                <span class="badge bg-danger"><i class="bi bi-shield-fill-check"></i> Superuser</span>
+                            {% elif usuario.is_staff %}
+                                <span class="badge bg-info"><i class="bi bi-star-fill"></i> Staff</span>
+                            {% else %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Ativo</span>
+                            {% endif %}
+                        </td>
+                        {% if pode_admin %}
                         <td class="text-center px-4">
                             <div class="btn-group btn-group-sm">
                                 <a href="{% url 'cal:editar_usuario' usuario.id %}" class="btn btn-outline-warning" title="Editar"><i class="bi bi-pencil"></i></a>
@@ -34,57 +175,87 @@
                                 <form method="post" action="{% url 'cal:excluir_usuario' usuario.id %}" class="d-inline" onsubmit="return confirm('Excluir permanentemente?')">{% csrf_token %}<button type="submit" class="btn btn-outline-danger btn-sm" title="Excluir"><i class="bi bi-trash"></i></button></form>
                             </div>
                         </td>
+                        {% endif %}
                     </tr>
+                    {% endwith %}
+                    {% empty %}
+                    <tr><td colspan="9" class="text-center py-5 text-muted">
+                        <i class="bi bi-people display-6 d-block mb-2"></i>
+                        Nenhum usuário encontrado.
+                    </td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        <div id="usuariosVazio" class="text-center py-5 text-muted d-none">
+            <i class="bi bi-search display-6 d-block mb-2"></i>
+            Nenhum usuário corresponde aos filtros atuais.
+        </div>
     </div>
 
-    <!-- Mobile List -->
-    <div class="d-md-none">
+    {# ── Cards mobile ─────────────────────────────────────────────────── #}
+    <div class="d-md-none" id="usuariosMobile">
         {% for usuario in usuarios %}
-        <div class="card border-0 shadow-sm mb-3 bg-white">
+        {% with perfil=usuario.perfil %}
+        <div class="card border-0 shadow-sm mb-3 usuario-row{% if not usuario.is_active %} bg-light opacity-75{% else %} bg-white{% endif %}"
+             data-papel="{{ usuario.papel_chave }}"
+             data-ativo="{% if usuario.is_active %}1{% else %}0{% endif %}"
+             data-busca="{{ usuario.username|lower }} {{ usuario.email|lower }} {{ usuario.get_full_name|lower }}">
             <div class="card-body p-3">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="bg-primary-subtle text-primary rounded-circle p-3 me-3">
-                        <i class="bi bi-person-fill fs-4"></i>
+                <div class="d-flex align-items-center mb-2">
+                    <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center me-3 fw-bold"
+                         style="width:48px;height:48px;">
+                        {{ usuario.username|first|upper }}{{ usuario.last_name|first|upper }}
                     </div>
-                    <div>
-                        <h6 class="fw-bold mb-0 text-primary">{{ usuario.username }}</h6>
-                        <small class="text-muted d-block text-truncate" style="max-width: 200px;">{{ usuario.email }}</small>
-                        <small class="fw-bold">{{ usuario.get_full_name|default:"-" }}</small>
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h6 class="fw-bold mb-0 text-primary text-truncate">{{ usuario.username }}</h6>
+                            {% if not usuario.is_active %}
+                                <span class="badge bg-secondary ms-1">Inativo</span>
+                            {% elif usuario.is_superuser %}
+                                <span class="badge bg-danger ms-1">Super</span>
+                            {% elif usuario.is_staff %}
+                                <span class="badge bg-info ms-1">Staff</span>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted d-block text-truncate">{{ usuario.get_full_name|default:"—" }}</small>
+                        <small class="text-muted d-block text-truncate">{{ usuario.email|default:"—" }}</small>
                     </div>
                 </div>
-                
+
+                <div class="d-flex flex-wrap gap-1 mb-2">
+                    {% if perfil and perfil.papel %}
+                        <span class="badge rounded-pill bg-primary-subtle text-primary">{{ perfil.get_papel_display }}</span>
+                    {% endif %}
+                    {% if perfil and perfil.escola %}
+                        <span class="badge rounded-pill bg-light text-dark border"><i class="bi bi-building"></i> {{ perfil.escola.nome_escola }}</span>
+                    {% endif %}
+                    {% if perfil %}{% for ex in perfil.escolas_extras.all %}
+                        <span class="badge rounded-pill bg-light text-dark border">{{ ex.nome_escola }}</span>
+                    {% endfor %}{% endif %}
+                    {% if perfil and perfil.professor_vinculado %}
+                        <span class="badge rounded-pill bg-success-subtle text-success"><i class="bi bi-link-45deg"></i> {{ perfil.professor_vinculado.nome_professor }}</span>
+                    {% elif usuario.alunos.all %}
+                        <span class="badge rounded-pill bg-info-subtle text-info"><i class="bi bi-people"></i> {{ usuario.alunos.all|length }} filho{{ usuario.alunos.all|length|pluralize }}</span>
+                    {% endif %}
+                </div>
+
+                <small class="text-muted d-block mb-2">
+                    <i class="bi bi-clock-history"></i>
+                    {% if usuario.last_login %}{{ usuario.last_login|timesince }} atrás{% else %}Nunca acessou{% endif %}
+                </small>
+
+                {% if pode_admin %}
                 <div class="row g-2 border-top pt-2">
-                    <div class="col-6">
-                        <a href="{% url 'cal:editar_usuario' usuario.id %}" class="btn btn-sm btn-outline-warning w-100 py-2">
-                            <i class="bi bi-pencil"></i> Editar
-                        </a>
-                    </div>
-                    <div class="col-6">
-                        <a href="{% url 'cal:resetar_senha' usuario.id %}" class="btn btn-sm btn-outline-info w-100 py-2">
-                            <i class="bi bi-key"></i> Senha
-                        </a>
-                    </div>
-                    <div class="col-6">
-                        <form method="post" action="{% url 'cal:desativar_usuario' usuario.id %}" onsubmit="return confirm('Desativar?')">{% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-outline-secondary w-100 py-2">
-                                <i class="bi bi-slash-circle"></i> Off
-                            </button>
-                        </form>
-                    </div>
-                    <div class="col-6">
-                        <form method="post" action="{% url 'cal:excluir_usuario' usuario.id %}" onsubmit="return confirm('Excluir?')">{% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-outline-danger w-100 py-2">
-                                <i class="bi bi-trash"></i> Excluir
-                            </button>
-                        </form>
-                    </div>
+                    <div class="col-6"><a href="{% url 'cal:editar_usuario' usuario.id %}" class="btn btn-sm btn-outline-warning w-100"><i class="bi bi-pencil"></i> Editar</a></div>
+                    <div class="col-6"><a href="{% url 'cal:resetar_senha' usuario.id %}" class="btn btn-sm btn-outline-info w-100"><i class="bi bi-key"></i> Senha</a></div>
+                    <div class="col-6"><form method="post" action="{% url 'cal:desativar_usuario' usuario.id %}" onsubmit="return confirm('Desativar?')">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-secondary w-100"><i class="bi bi-slash-circle"></i> Off</button></form></div>
+                    <div class="col-6"><form method="post" action="{% url 'cal:excluir_usuario' usuario.id %}" onsubmit="return confirm('Excluir?')">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger w-100"><i class="bi bi-trash"></i> Excluir</button></form></div>
                 </div>
+                {% endif %}
             </div>
         </div>
+        {% endwith %}
         {% empty %}
         <div class="text-center py-5 text-muted bg-white rounded-4 shadow-sm">
             <i class="bi bi-people display-4 d-block mb-3"></i>
@@ -93,4 +264,95 @@
         {% endfor %}
     </div>
 </div>
+
+<script>
+(function () {
+    const PAPEL_INICIAL = "{{ papel_filtro|default:'' }}";
+    const BUSCA_INICIAL = "{{ busca|default:''|escapejs }}";
+
+    const tabs        = document.querySelectorAll('.papel-tab');
+    const inputBusca  = document.getElementById('usuariosBusca');
+    const btnLimpar   = document.getElementById('usuariosBuscaLimpar');
+    const switchInat  = document.getElementById('mostrarInativos');
+    const linhas      = document.querySelectorAll('.usuario-row');
+    const vazioMsg    = document.getElementById('usuariosVazio');
+
+    let papelAtual = PAPEL_INICIAL;
+    let buscaAtual = (BUSCA_INICIAL || '').toLowerCase();
+    let mostrarInat = false;
+
+    // Marca a aba ativa de acordo com a querystring (estado inicial)
+    if (papelAtual) {
+        tabs.forEach(t => t.classList.remove('active'));
+        const alvo = document.querySelector('.papel-tab[data-papel="' + papelAtual + '"]');
+        if (alvo) alvo.classList.add('active');
+    }
+
+    function aplicarFiltros() {
+        let visiveis = 0;
+        linhas.forEach(row => {
+            const papel  = row.getAttribute('data-papel') || '';
+            const ativo  = row.getAttribute('data-ativo') === '1';
+            const blob   = row.getAttribute('data-busca') || '';
+
+            const okPapel  = !papelAtual || papel === papelAtual;
+            const okAtivo  = ativo || mostrarInat;
+            const okBusca  = !buscaAtual || blob.indexOf(buscaAtual) !== -1;
+
+            const visivel = okPapel && okAtivo && okBusca;
+            row.classList.toggle('d-none', !visivel);
+            if (visivel) visiveis++;
+        });
+        if (vazioMsg) vazioMsg.classList.toggle('d-none', visiveis > 0);
+    }
+
+    tabs.forEach(t => t.addEventListener('click', () => {
+        tabs.forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        papelAtual = t.getAttribute('data-papel') || '';
+        atualizarUrl();
+        aplicarFiltros();
+    }));
+
+    if (inputBusca) {
+        inputBusca.addEventListener('input', () => {
+            buscaAtual = inputBusca.value.trim().toLowerCase();
+            aplicarFiltros();
+        });
+        inputBusca.addEventListener('change', atualizarUrl);
+    }
+    if (btnLimpar) btnLimpar.addEventListener('click', () => {
+        if (!inputBusca) return;
+        inputBusca.value = '';
+        buscaAtual = '';
+        atualizarUrl();
+        aplicarFiltros();
+        inputBusca.focus();
+    });
+    if (switchInat) switchInat.addEventListener('change', () => {
+        mostrarInat = switchInat.checked;
+        aplicarFiltros();
+    });
+
+    function atualizarUrl() {
+        // Sincroniza a querystring (sem recarregar) — assim a URL fica
+        // pronta para a futura migração para filtros server-side.
+        const url = new URL(window.location.href);
+        if (papelAtual) url.searchParams.set('papel', papelAtual);
+        else url.searchParams.delete('papel');
+        if (buscaAtual) url.searchParams.set('busca', buscaAtual);
+        else url.searchParams.delete('busca');
+        window.history.replaceState({}, '', url.toString());
+    }
+
+    // Tooltips Bootstrap
+    if (window.bootstrap) {
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+            new bootstrap.Tooltip(el);
+        });
+    }
+
+    aplicarFiltros();
+})();
+</script>
 {% endblock %}
